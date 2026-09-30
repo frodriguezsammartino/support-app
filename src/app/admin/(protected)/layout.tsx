@@ -14,11 +14,11 @@ export default function AdminProtectedLayout({ children }: LayoutProps<"/admin">
     <div className="flex flex-1 flex-col bg-zinc-50">
       <header className="border-b bg-zinc-900 text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-white p-1">
-              <Image src="/logo.webp" alt="Logo" width={28} height={28} className="object-contain" />
+          <div className="flex items-center gap-3">
+            <span className="flex items-center rounded-lg bg-white px-3 py-1.5">
+              <Image src="/logo.webp" alt="Logo" width={160} height={80} className="h-9 w-auto object-contain" />
             </span>
-            <span className="font-semibold">Panel técnico</span>
+            <span className="hidden font-semibold sm:inline">Panel técnico</span>
           </div>
           <nav className="flex gap-1 text-sm font-medium">
             {NAV_ITEMS.map((item) => (
