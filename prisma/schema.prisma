@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TicketStatus {
+  BACKLOG
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Category {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  active  Boolean  @default(true)
+  tickets Ticket[]
+}
+
+model Ticket {
+  id             String          @id @default(cuid())
+  number         Int             @unique @default(autoincrement())
+  reporterName   String
+  reporterEmail  String
+  title          String
+  description    String
+  status         TicketStatus    @default(BACKLOG)
+  priority       TicketPriority?
+  categoryId     String?
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  resolutionNote String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  comments      Comment[]
+  statusHistory TicketStatusHistory[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([reporterEmail])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorName String
+  isFromAdmin Boolean @default(false)
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model TicketStatusHistory {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromStatus TicketStatus?
+  toStatus   TicketStatus
+  note       String?
+  changedAt  DateTime      @default(now())
+
+  @@index([ticketId])
+}
