@@ -4,6 +4,7 @@ import {
   getTicketsByCategory,
   getTicketsByStatus,
   getWeeklyTrend,
+  rangeToFromDate,
   type StatsFilters,
 } from "@/lib/stats";
 import { db } from "@/lib/db";
@@ -19,13 +20,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
   const range = typeof searchParams?.range === "string" ? searchParams.range : "all";
   const categoryId = typeof searchParams?.categoryId === "string" ? searchParams.categoryId : undefined;
 
-  const filters: StatsFilters = { categoryId };
-  if (range !== "all") {
-    const days = Number(range);
-    if (!Number.isNaN(days)) {
-      filters.from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    }
-  }
+  const filters: StatsFilters = { categoryId, from: rangeToFromDate(range) };
 
   const [kpis, byCategory, byStatus, resolutionByCategory, trend, categories] = await Promise.all([
     getKpis(filters),

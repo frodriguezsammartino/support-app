@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { BarChart3, Home, LogOut, Menu } from "lucide-react";
+import { BarChart3, Home, LogOut, Menu, Wrench } from "lucide-react";
 import { adminLogout } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,10 @@ export function AdminHeader() {
             <DropdownMenuItem render={<Link href="/admin" />}>
               <Home className="size-4" />
               Home
+            </DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/admin/mantenimiento" />}>
+              <Wrench className="size-4" />
+              Mantenimiento
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/admin/dashboard" />}>
               <BarChart3 className="size-4" />

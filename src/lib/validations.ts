@@ -21,3 +21,23 @@ export const completeTicketSchema = z.object({
 export const adminLoginSchema = z.object({
   password: z.string().min(1, "Ingresá la contraseña"),
 });
+
+export const createInternalTicketSchema = z.object({
+  title: z.string().trim().min(5, "Contá brevemente la tarea").max(150),
+  description: z.string().trim().optional(),
+  categoryId: z.string().min(1, "Elegí una categoría"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  reporterName: z.string().trim().max(120).optional(),
+});
+
+export const createMaintenanceTaskSchema = z.object({
+  title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
+  description: z.string().trim().optional(),
+  intervalHours: z.coerce.number().int().min(1, "El intervalo debe ser de al menos 1 hora").max(8760),
+});
+
+export const updateMaintenanceTaskSchema = createMaintenanceTaskSchema;
+
+export const completeMaintenanceTaskSchema = z.object({
+  note: z.string().trim().optional(),
+});

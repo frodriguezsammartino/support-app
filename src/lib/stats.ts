@@ -7,6 +7,13 @@ export type StatsFilters = {
   categoryId?: string;
 };
 
+export function rangeToFromDate(range: string): Date | undefined {
+  if (range === "all") return undefined;
+  const days = Number(range);
+  if (Number.isNaN(days)) return undefined;
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
+
 function baseWhere(filters: StatsFilters) {
   const conditions: Prisma.Sql[] = [];
   if (filters.from) conditions.push(Prisma.sql`t."createdAt" >= ${filters.from}`);

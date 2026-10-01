@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { PendientesTable } from "@/components/backlog/PendientesTable";
 import { HistorialTable } from "@/components/backlog/HistorialTable";
+import { NewInternalTicketDialog } from "@/components/backlog/NewInternalTicketDialog";
 
 export default async function HomePage() {
   const [pendientes, historial, categories] = await Promise.all([
@@ -21,7 +22,10 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Pendientes</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Pendientes</h1>
+          <NewInternalTicketDialog categories={categories} />
+        </div>
         <PendientesTable tickets={pendientes} categories={categories} />
       </div>
 

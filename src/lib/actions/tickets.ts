@@ -5,7 +5,12 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
 import { sendTicketCompletedEmail } from "@/lib/email";
-import { addCommentSchema, completeTicketSchema, createTicketSchema } from "@/lib/validations";
+import {
+  addCommentSchema,
+  completeTicketSchema,
+  createInternalTicketSchema,
+  createTicketSchema,
+} from "@/lib/validations";
 import type { TicketPriority, TicketStatus } from "@prisma/client";
 
 export type FormState = { error?: string } | undefined;
@@ -165,13 +170,15 @@ export async function completeTicket(_prevState: FormState, formData: FormData):
     },
   });
 
-  await sendTicketCompletedEmail({
-    to: ticket.reporterEmail,
-    reporterName: ticket.reporterName,
-    ticketNumber: ticket.number,
-    ticketTitle: ticket.title,
-    resolutionNote: parsed.data.resolutionNote,
-  });
+  if (ticket.reporterEmail) {
+    await sendTicketCompletedEmail({
+      to: ticket.reporterEmail,
+      reporterName: ticket.reporterName,
+      ticketNumber: ticket.number,
+      ticketTitle: ticket.title,
+      resolutionNote: parsed.data.resolutionNote,
+    });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/admin/dashboard");
@@ -228,5 +235,37 @@ export async function reopenTicket(
   revalidatePath("/admin");
   revalidatePath("/admin/dashboard");
   revalidatePath(`/admin/tickets/${ticketId}`);
+  return {};
+}
+
+/** El técnico carga una tarea para sí mismo, sin pasar por el formulario público. */
+export async function createInternalTicket(input: {
+  title: string;
+  description?: string;
+  categoryId: string;
+  priority: TicketPriority;
+  reporterName?: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
+
+  const parsed = createInternalTicketSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
+  }
+
+  await db.ticket.create({
+    data: {
+      reporterName: parsed.data.reporterName?.trim() || "Técnico",
+      reporterEmail: null,
+      title: parsed.data.title,
+      description: parsed.data.description ?? "",
+      categoryId: parsed.data.categoryId,
+      priority: parsed.data.priority,
+      statusHistory: { create: { toStatus: "BACKLOG" } },
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/dashboard");
   return {};
 }

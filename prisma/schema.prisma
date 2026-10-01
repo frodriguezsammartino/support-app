@@ -30,7 +30,7 @@ model Ticket {
   id             String          @id @default(cuid())
   number         Int             @unique @default(autoincrement())
   reporterName   String
-  reporterEmail  String
+  reporterEmail  String?
   title          String
   description    String
   status         TicketStatus    @default(BACKLOG)
@@ -73,4 +73,29 @@ model TicketStatusHistory {
   changedAt  DateTime      @default(now())
 
   @@index([ticketId])
+}
+
+model MaintenanceTask {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  intervalHours   Int
+  active          Boolean   @default(true)
+  lastCompletedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  completions MaintenanceCompletion[]
+
+  @@index([active])
+}
+
+model MaintenanceCompletion {
+  id          String          @id @default(cuid())
+  taskId      String
+  task        MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  note        String?
+  completedAt DateTime        @default(now())
+
+  @@index([taskId])
 }
