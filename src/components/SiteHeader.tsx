@@ -7,7 +7,7 @@ export function SiteHeader() {
     <header className="border-b bg-white">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.webp" alt="Clínica de Fracturas y Ortopedia" width={140} height={70} className="h-10 w-auto object-contain" priority />
+          <Image src="/logo.webp" alt="Clínica de Fracturas y Ortopedia" width={200} height={100} className="h-14 w-auto object-contain" priority />
         </Link>
 
         <nav className="flex items-center gap-1">
