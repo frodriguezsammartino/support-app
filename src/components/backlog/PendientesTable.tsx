@@ -219,7 +219,10 @@ export function PendientesTable({
                 </TableRow>
               )}
               {visibleRows.map((ticket) => (
-                <TableRow key={ticket.id}>
+                <TableRow
+                  key={ticket.id}
+                  className={ticket.status === "IN_PROGRESS" ? "bg-blue-50/60 hover:bg-blue-50" : undefined}
+                >
                   <TableCell className="text-zinc-500">#{ticket.number}</TableCell>
                   <TableCell>
                     <Link href={`/admin/tickets/${ticket.id}`} className="font-medium hover:underline">
