@@ -19,9 +19,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { MaintenanceTask } from "@prisma/client";
 
-export function EditMaintenanceTaskDialog({ task }: { task: MaintenanceTask }) {
+type EditableTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  intervalHours: number;
+};
+
+export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(task.title);

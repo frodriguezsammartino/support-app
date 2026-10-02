@@ -1,11 +1,21 @@
 import { db } from "@/lib/db";
-import { MaintenanceTaskCard } from "@/components/maintenance/MaintenanceTaskCard";
+import { toMaintenanceRow } from "@/lib/maintenance";
+import { MaintenanceSummary } from "@/components/maintenance/MaintenanceSummary";
+import { MaintenanceTable } from "@/components/maintenance/MaintenanceTable";
 import { NewMaintenanceTaskDialog } from "@/components/maintenance/NewMaintenanceTaskDialog";
 
 export default async function MantenimientoPage() {
   const tasks = await db.maintenanceTask.findMany({
-    orderBy: [{ active: "desc" }, { createdAt: "asc" }],
-    include: { completions: { orderBy: { completedAt: "desc" }, take: 20 } },
+    include: { _count: { select: { completions: true } } },
+  });
+
+  const rows = tasks.map((task) => toMaintenanceRow(task, task._count.completions));
+
+  // Las activas primero, y dentro de ellas lo que vence antes arriba: así la primera
+  // fila siempre es la que hay que atender.
+  const sorted = [...rows].sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return a.nextDueAt.getTime() - b.nextDueAt.getTime();
   });
 
   return (
@@ -15,17 +25,8 @@ export default async function MantenimientoPage() {
         <NewMaintenanceTaskDialog />
       </div>
 
-      {tasks.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-zinc-500">
-          Todavía no cargaste ninguna tarea periódica.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {tasks.map((task) => (
-            <MaintenanceTaskCard key={task.id} task={task} />
-          ))}
-        </div>
-      )}
+      <MaintenanceSummary rows={rows} />
+      <MaintenanceTable rows={sorted} />
     </div>
   );
 }

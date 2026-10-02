@@ -33,8 +33,9 @@ export function CompleteMaintenanceDialog({ taskId, taskTitle }: { taskId: strin
     >
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon-sm" title="Marcar como hecho">
+          <Button variant="outline" size="sm" title="Registrar que la hiciste">
             <CheckCircle2 className="size-4" />
+            Marcar hecho
           </Button>
         }
       />

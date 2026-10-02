@@ -31,7 +31,7 @@ export async function createMaintenanceTask(input: {
     },
   });
 
-  revalidatePath("/admin/mantenimiento");
+  revalidatePath("/admin/mantenimiento", "layout");
   return {};
 }
 
@@ -55,7 +55,7 @@ export async function updateMaintenanceTask(
     },
   });
 
-  revalidatePath("/admin/mantenimiento");
+  revalidatePath("/admin/mantenimiento", "layout");
   return {};
 }
 
@@ -76,7 +76,7 @@ export async function completeMaintenanceTask(taskId: string, note?: string): Pr
     },
   });
 
-  revalidatePath("/admin/mantenimiento");
+  revalidatePath("/admin/mantenimiento", "layout");
   return {};
 }
 
@@ -85,7 +85,7 @@ export async function toggleMaintenanceTaskActive(taskId: string, active: boolea
 
   await db.maintenanceTask.update({ where: { id: taskId }, data: { active } });
 
-  revalidatePath("/admin/mantenimiento");
+  revalidatePath("/admin/mantenimiento", "layout");
   return {};
 }
 
@@ -94,6 +94,6 @@ export async function deleteMaintenanceTask(taskId: string): Promise<ActionResul
 
   await db.maintenanceTask.delete({ where: { id: taskId } });
 
-  revalidatePath("/admin/mantenimiento");
+  revalidatePath("/admin/mantenimiento", "layout");
   return {};
 }
