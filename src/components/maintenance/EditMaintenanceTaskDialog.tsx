@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { updateMaintenanceTask } from "@/lib/actions/maintenance";
 import type { Recurrence } from "@/lib/maintenance";
 import { RecurrenceFields } from "./RecurrenceFields";
+import { AssetPicker, type AssetOption } from "@/components/assets/AssetPicker";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +26,21 @@ type EditableTask = Recurrence & {
   id: string;
   title: string;
   description: string | null;
+  assetId: string | null;
 };
 
-export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
+export function EditMaintenanceTaskDialog({
+  task,
+  assets,
+}: {
+  task: EditableTask;
+  assets: AssetOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
+  const [assetId, setAssetId] = useState(task.assetId ?? "");
   const [recurrence, setRecurrence] = useState<Recurrence>(task);
   const [isPending, startTransition] = useTransition();
 
@@ -60,6 +69,10 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
             <Label>Descripción (opcional)</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
+          <div className="flex flex-col gap-2">
+            <Label>Equipo (opcional)</Label>
+            <AssetPicker assets={assets} value={assetId} onChange={setAssetId} />
+          </div>
           <RecurrenceFields initial={task} onChange={setRecurrence} />
         </div>
 
@@ -78,6 +91,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
                 const result = await updateMaintenanceTask(task.id, {
                   title,
                   description: description || undefined,
+                  assetId: assetId || undefined,
                   ...recurrence,
                 });
                 if (result.error) {

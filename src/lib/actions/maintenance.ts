@@ -15,6 +15,7 @@ export type ActionResult = { error?: string };
 export type MaintenanceTaskInput = {
   title: string;
   description?: string;
+  assetId?: string;
 } & RecurrenceInput;
 
 /** Normaliza la regla: deja en null los campos que no aplican a la frecuencia elegida. */
@@ -48,6 +49,7 @@ function revalidateMaintenance(taskId?: string) {
   revalidatePath("/admin/mantenimiento");
   if (taskId) revalidatePath(`/admin/mantenimiento/${taskId}`);
   revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/equipos");
 }
 
 export async function createMaintenanceTask(input: MaintenanceTaskInput): Promise<ActionResult> {
@@ -62,6 +64,7 @@ export async function createMaintenanceTask(input: MaintenanceTaskInput): Promis
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
+      assetId: parsed.data.assetId || null,
       ...toRecurrenceData(parsed.data),
     },
   });
@@ -86,6 +89,7 @@ export async function updateMaintenanceTask(
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
+      assetId: parsed.data.assetId || null,
       ...toRecurrenceData(parsed.data),
     },
   });

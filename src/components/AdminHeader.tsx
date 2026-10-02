@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, Home, LogOut, Menu, Wrench } from "lucide-react";
+import { BarChart3, Home, LogOut, Menu, Monitor, Wrench } from "lucide-react";
 import { adminLogout } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
 /** Ordenado de más específico a más general: gana el primer prefijo que matchea. */
 const SECTIONS: { prefix: string; label: string }[] = [
   { prefix: "/admin/mantenimiento", label: "Panel de Mantenimiento" },
+  { prefix: "/admin/equipos", label: "Inventario de Equipos" },
   { prefix: "/admin/dashboard", label: "Dashboard" },
   { prefix: "/admin/tickets", label: "Ticket" },
   { prefix: "/admin", label: "Panel de Tareas" },
@@ -55,6 +56,10 @@ export function AdminHeader() {
             <DropdownMenuItem render={<Link href="/admin/mantenimiento" />}>
               <Wrench className="size-4" />
               Panel de Mantenimiento
+            </DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/admin/equipos" />}>
+              <Monitor className="size-4" />
+              Inventario de Equipos
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/admin/dashboard" />}>
               <BarChart3 className="size-4" />

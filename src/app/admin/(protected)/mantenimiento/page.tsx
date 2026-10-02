@@ -5,9 +5,19 @@ import { MaintenanceTable } from "@/components/maintenance/MaintenanceTable";
 import { NewMaintenanceTaskDialog } from "@/components/maintenance/NewMaintenanceTaskDialog";
 
 export default async function MantenimientoPage() {
-  const tasks = await db.maintenanceTask.findMany({
-    include: { _count: { select: { completions: true } } },
-  });
+  const [tasks, assets] = await Promise.all([
+    db.maintenanceTask.findMany({
+      include: {
+        _count: { select: { completions: true } },
+        asset: { select: { id: true, code: true, name: true } },
+      },
+    }),
+    db.asset.findMany({
+      where: { status: { not: "RETIRED" } },
+      select: { id: true, code: true, name: true, location: true },
+      orderBy: { code: "asc" },
+    }),
+  ]);
 
   const rows = tasks.map((task) => toMaintenanceRow(task, task._count.completions));
 
@@ -17,7 +27,7 @@ export default async function MantenimientoPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <NewMaintenanceTaskDialog />
+        <NewMaintenanceTaskDialog assets={assets} />
       </div>
 
       <MaintenanceSummary rows={rows} />

@@ -16,10 +16,17 @@ export default async function MaintenanceTaskDetailPage(
 ) {
   const { id } = await props.params;
 
+  const assets = await db.asset.findMany({
+    where: { status: { not: "RETIRED" } },
+    select: { id: true, code: true, name: true, location: true },
+    orderBy: { code: "asc" },
+  });
+
   const task = await db.maintenanceTask.findUnique({
     where: { id },
     include: {
       completions: { orderBy: { completedAt: "desc" } },
+      asset: { select: { id: true, code: true, name: true } },
       _count: { select: { completions: true } },
     },
   });
@@ -91,7 +98,7 @@ export default async function MaintenanceTaskDetailPage(
               taskTitle={task.title}
               done={row.status === "OK" || row.status === "FINISHED"}
             />
-            <EditMaintenanceTaskDialog task={task} />
+            <EditMaintenanceTaskDialog task={task} assets={assets} />
           </div>
         </CardContent>
       </Card>

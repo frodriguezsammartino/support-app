@@ -4,6 +4,7 @@ import {
   getMaintenanceWeeklyTrend,
   getOldestOpenTicketAgeHours,
   getResolutionTimeByCategory,
+  getTicketsByAsset,
   getTicketsByCategory,
   getTicketsByPriority,
   getTicketsByStatus,
@@ -15,6 +16,7 @@ import { db } from "@/lib/db";
 import { getMaintenanceStatus } from "@/lib/maintenance";
 import { KpiCard } from "@/components/charts/KpiCard";
 import { TicketsByCategoryChart } from "@/components/charts/TicketsByCategoryChart";
+import { TicketsByAssetChart } from "@/components/charts/TicketsByAssetChart";
 import { TicketsByStatusChart } from "@/components/charts/TicketsByStatusChart";
 import { TicketsByPriorityChart } from "@/components/charts/TicketsByPriorityChart";
 import { ResolutionTimeChart } from "@/components/charts/ResolutionTimeChart";
@@ -40,24 +42,28 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
     byCategory,
     byStatus,
     byPriority,
+    byAsset,
     resolutionByCategory,
     trend,
     maintenanceTrend,
     maintenanceDone,
     oldestOpenHours,
     maintenanceTasks,
+    assetCount,
     categories,
   ] = await Promise.all([
     getKpis(filters),
     getTicketsByCategory(filters),
     getTicketsByStatus(filters),
     getTicketsByPriority(filters),
+    getTicketsByAsset(filters),
     getResolutionTimeByCategory(filters),
     getWeeklyTrend(filters),
     getMaintenanceWeeklyTrend(filters),
     getMaintenanceCompletionCount(filters),
     getOldestOpenTicketAgeHours(filters),
     db.maintenanceTask.findMany({ include: { _count: { select: { completions: true } } } }),
+    db.asset.count(),
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
@@ -94,13 +100,14 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
       </div>
 
       <h2 className="mt-2 text-sm font-medium uppercase tracking-wide text-zinc-500">
-        Mantenimiento
+        Mantenimiento y equipos
       </h2>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Tareas periódicas" value={String(maintenanceTasks.length)} />
         <KpiCard label="Mantenimientos realizados" value={String(maintenanceDone)} />
         <KpiCard label="Tareas vencidas ahora" value={String(maintenanceOverdue)} />
+        <KpiCard label="Equipos en el inventario" value={String(assetCount)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -108,6 +115,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
         <TicketsByPriorityChart data={byPriority} />
         <TicketsByStatusChart data={byStatus} />
         <ResolutionTimeChart data={resolutionByCategory} />
+        <TicketsByAssetChart data={byAsset} />
         <TrendChart data={trend} />
         <MaintenanceTrendChart data={maintenanceTrend} />
       </div>

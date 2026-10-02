@@ -400,6 +400,8 @@ export function describeRecurrence(task: Recurrence): string {
  * Fila lista para la UI: el estado y el vencimiento se calculan una sola vez en el
  * servidor y bajan ya resueltos, así el cliente no recalcula contra un reloj distinto.
  */
+export type MaintenanceAssetRef = { id: string; code: number; name: string };
+
 export type MaintenanceRow = Recurrence & {
   id: string;
   title: string;
@@ -409,6 +411,7 @@ export type MaintenanceRow = Recurrence & {
   nextDueAt: Date;
   status: MaintenanceStatusKey;
   completionCount: number;
+  asset?: MaintenanceAssetRef | null;
 };
 
 export function toMaintenanceRow(
@@ -418,6 +421,7 @@ export function toMaintenanceRow(
     description: string | null;
     createdAt: Date;
     lastCompletedAt: Date | null;
+    asset?: MaintenanceAssetRef | null;
   },
   completionCount: number
 ): MaintenanceRow {

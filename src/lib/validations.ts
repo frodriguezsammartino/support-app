@@ -23,6 +23,7 @@ export const adminLoginSchema = z.object({
 });
 
 export const createInternalTicketSchema = z.object({
+  assetId: z.string().optional(),
   title: z.string().trim().min(5, "Contá brevemente la tarea").max(150),
   description: z.string().trim().optional(),
   categoryId: z.string().min(1, "Elegí una categoría"),
@@ -34,6 +35,7 @@ export const createMaintenanceTaskSchema = z
   .object({
     title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
     description: z.string().trim().optional(),
+    assetId: z.string().optional(),
     freq: z.enum(["HOUR", "DAY", "WEEK", "MONTH", "YEAR"]),
     interval: z.coerce.number().int().min(1, "Tiene que repetirse al menos cada 1").max(999),
     timeOfDay: z.coerce.number().int().min(0).max(1439).nullable().optional(),
@@ -66,3 +68,27 @@ export const updateMaintenanceTaskSchema = createMaintenanceTaskSchema;
 export const completeMaintenanceTaskSchema = z.object({
   note: z.string().trim().optional(),
 });
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .nullable()
+    .transform((v) => v || null);
+
+export const createAssetSchema = z.object({
+  name: z.string().trim().min(2, "Ponele un nombre al equipo").max(120),
+  type: z.enum(["PC", "NOTEBOOK", "PRINTER", "SERVER", "NETWORK", "UPS", "PHONE", "OTHER"]),
+  status: z.enum(["ACTIVE", "REPAIR", "RETIRED"]),
+  brand: optionalText(80),
+  model: optionalText(80),
+  serialNumber: optionalText(120),
+  location: optionalText(120),
+  purchasedAt: z.coerce.date().nullable().optional(),
+  warrantyUntil: z.coerce.date().nullable().optional(),
+  notes: optionalText(4000),
+});
+
+export const updateAssetSchema = createAssetSchema;

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PRIORITY_META, PRIORITY_ORDER } from "@/lib/priority";
+import { AssetPicker, type AssetOption } from "@/components/assets/AssetPicker";
 import type { TicketPriority } from "@prisma/client";
 
 const EMPTY = {
@@ -34,9 +35,16 @@ const EMPTY = {
   reporterName: "",
   categoryId: "",
   priority: "" as TicketPriority | "",
+  assetId: "",
 };
 
-export function NewInternalTicketDialog({ categories }: { categories: { id: string; name: string }[] }) {
+export function NewInternalTicketDialog({
+  categories,
+  assets,
+}: {
+  categories: { id: string; name: string }[];
+  assets: AssetOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -138,6 +146,15 @@ export function NewInternalTicketDialog({ categories }: { categories: { id: stri
               </Select>
             </div>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Equipo (opcional)</Label>
+            <AssetPicker
+              assets={assets}
+              value={form.assetId}
+              onChange={(v) => update("assetId", v)}
+            />
+          </div>
         </div>
 
         <DialogFooter>
@@ -158,6 +175,7 @@ export function NewInternalTicketDialog({ categories }: { categories: { id: stri
                   categoryId: form.categoryId,
                   priority: form.priority as TicketPriority,
                   reporterName: form.reporterName || undefined,
+                  assetId: form.assetId || undefined,
                 });
                 if (result.error) {
                   toast.error(result.error);

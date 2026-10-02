@@ -55,6 +55,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
             <TableRow>
               <TableHead className="w-36">Estado</TableHead>
               <TableHead>Tarea</TableHead>
+              <TableHead className="w-44">Equipo</TableHead>
               <TableHead className="w-64">Se repite</TableHead>
               <TableHead className="w-48">Última vez</TableHead>
               <TableHead className="w-48">Próxima</TableHead>
@@ -64,7 +65,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-zinc-500">
+                <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
                   Todavía no cargaste ninguna tarea periódica.
                 </TableCell>
               </TableRow>
@@ -90,6 +91,18 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                     )}
                   </TableCell>
 
+                  <TableCell>
+                    {task.asset ? (
+                      <Link
+                        href={`/admin/equipos/${task.asset.id}`}
+                        className="text-sm text-zinc-700 hover:underline"
+                      >
+                        {task.asset.name}
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-zinc-600">{describeRecurrence(task)}</TableCell>
 
                   <TableCell>

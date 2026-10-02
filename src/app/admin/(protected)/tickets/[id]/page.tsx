@@ -7,6 +7,7 @@ import { PriorityBadge } from "@/components/tickets/PriorityBadge";
 import { CommentForm } from "@/components/tickets/CommentForm";
 import { TicketAdminControls } from "@/components/tickets/TicketAdminControls";
 import { TicketTitleEditor } from "@/components/tickets/TicketTitleEditor";
+import { TicketAssetEditor } from "@/components/assets/TicketAssetEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -23,7 +24,14 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
 
   if (!ticket) notFound();
 
-  const categories = await db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+  const [categories, assets] = await Promise.all([
+    db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    db.asset.findMany({
+      where: { status: { not: "RETIRED" } },
+      select: { id: true, code: true, name: true, location: true },
+      orderBy: { code: "asc" },
+    }),
+  ]);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -61,6 +69,10 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
             <p>Categoría: {ticket.category?.name ?? "Sin categoría"}</p>
             <p>Creado: {ticket.createdAt.toLocaleString("es-AR")}</p>
             {ticket.completedAt && <p>Resuelto: {ticket.completedAt.toLocaleString("es-AR")}</p>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-zinc-500">Equipo:</span>
+            <TicketAssetEditor ticketId={ticket.id} assetId={ticket.assetId} assets={assets} />
           </div>
           {ticket.resolutionNote && (
             <div className="rounded-lg bg-zinc-50 p-3 text-sm">

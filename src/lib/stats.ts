@@ -153,6 +153,21 @@ export async function getMaintenanceWeeklyTrend(filters: StatsFilters = {}) {
   }));
 }
 
+/** Equipos con más tickets: los que más laburo generan. */
+export async function getTicketsByAsset(filters: StatsFilters = {}, limit = 8) {
+  const conditions = [Prisma.sql`t."assetId" IS NOT NULL`, ...baseWhere(filters)];
+  const rows = await db.$queryRaw<{ name: string; count: bigint }[]>`
+    SELECT a.name AS name, COUNT(*)::bigint AS count
+    FROM "Ticket" t
+    JOIN "Asset" a ON a.id = t."assetId"
+    ${whereClause(conditions)}
+    GROUP BY a.name
+    ORDER BY count DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => ({ name: r.name, count: Number(r.count) }));
+}
+
 export async function getWeeklyTrend(filters: StatsFilters = {}) {
   const conditions = baseWhere(filters);
   const rows = await db.$queryRaw<{ week: Date; count: bigint }[]>`

@@ -137,6 +137,7 @@ export async function deleteTicket(ticketId: string): Promise<ActionResult> {
 
   revalidatePath("/admin");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/equipos");
   return {};
 }
 
@@ -245,6 +246,7 @@ export async function createInternalTicket(input: {
   categoryId: string;
   priority: TicketPriority;
   reporterName?: string;
+  assetId?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
 
@@ -261,6 +263,7 @@ export async function createInternalTicket(input: {
       description: parsed.data.description ?? "",
       categoryId: parsed.data.categoryId,
       priority: parsed.data.priority,
+      assetId: parsed.data.assetId || null,
       statusHistory: { create: { toStatus: "BACKLOG" } },
     },
   });

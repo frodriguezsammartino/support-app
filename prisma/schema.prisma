@@ -37,6 +37,8 @@ model Ticket {
   priority       TicketPriority?
   categoryId     String?
   category       Category?       @relation(fields: [categoryId], references: [id])
+  assetId        String?
+  asset          Asset?          @relation(fields: [assetId], references: [id])
   resolutionNote String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -49,6 +51,7 @@ model Ticket {
   @@index([status])
   @@index([categoryId])
   @@index([reporterEmail])
+  @@index([assetId])
 }
 
 model Comment {
@@ -124,11 +127,16 @@ model MaintenanceTask {
   /// Cantidad de veces que hay que hacerla antes de darla por terminada.
   endCount Int?
 
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id])
+
   lastCompletedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   completions MaintenanceCompletion[]
+
+  @@index([assetId])
 }
 
 model MaintenanceCompletion {
@@ -139,4 +147,46 @@ model MaintenanceCompletion {
   completedAt DateTime        @default(now())
 
   @@index([taskId])
+}
+
+enum AssetType {
+  PC
+  NOTEBOOK
+  PRINTER
+  SERVER
+  NETWORK
+  UPS
+  PHONE
+  OTHER
+}
+
+enum AssetStatus {
+  ACTIVE
+  REPAIR
+  RETIRED
+}
+
+/// Un equipo del inventario. Los tickets y las tareas periodicas se le cuelgan,
+/// asi se puede ver todo lo que paso con un equipo en un solo lugar.
+model Asset {
+  id            String      @id @default(cuid())
+  code          Int         @unique @default(autoincrement())
+  name          String
+  type          AssetType   @default(OTHER)
+  brand         String?
+  model         String?
+  serialNumber  String?
+  location      String?
+  status        AssetStatus @default(ACTIVE)
+  purchasedAt   DateTime?
+  warrantyUntil DateTime?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  tickets          Ticket[]
+  maintenanceTasks MaintenanceTask[]
+
+  @@index([status])
+  @@index([type])
 }

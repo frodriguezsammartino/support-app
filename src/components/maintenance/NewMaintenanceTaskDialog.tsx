@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createMaintenanceTask } from "@/lib/actions/maintenance";
 import type { Recurrence } from "@/lib/maintenance";
 import { DEFAULT_RECURRENCE, RecurrenceFields } from "./RecurrenceFields";
+import { AssetPicker, type AssetOption } from "@/components/assets/AssetPicker";
 import {
   Dialog,
   DialogContent,
@@ -21,17 +22,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function NewMaintenanceTaskDialog() {
+export function NewMaintenanceTaskDialog({ assets }: { assets: AssetOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [assetId, setAssetId] = useState("");
   const [recurrence, setRecurrence] = useState<Recurrence>(DEFAULT_RECURRENCE);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
     setTitle("");
     setDescription("");
+    setAssetId("");
     setRecurrence(DEFAULT_RECURRENCE);
   }
 
@@ -72,6 +75,10 @@ export function NewMaintenanceTaskDialog() {
             <Label>Descripción (opcional)</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
+          <div className="flex flex-col gap-2">
+            <Label>Equipo (opcional)</Label>
+            <AssetPicker assets={assets} value={assetId} onChange={setAssetId} />
+          </div>
           {/* La key fuerza el remonte al reabrir, para que el formulario arranque limpio. */}
           <RecurrenceFields key={open ? "open" : "closed"} onChange={setRecurrence} />
         </div>
@@ -91,6 +98,7 @@ export function NewMaintenanceTaskDialog() {
                 const result = await createMaintenanceTask({
                   title,
                   description: description || undefined,
+                  assetId: assetId || undefined,
                   ...recurrence,
                 });
                 if (result.error) {
