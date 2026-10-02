@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { updateMaintenanceTask } from "@/lib/actions/maintenance";
-import { FrequencyFields } from "./FrequencyFields";
+import type { Schedule } from "@/lib/maintenance";
+import { ScheduleFields } from "./ScheduleFields";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-type EditableTask = {
+type EditableTask = Schedule & {
   id: string;
   title: string;
   description: string | null;
-  intervalHours: number;
 };
 
 export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
@@ -32,22 +32,23 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
-  const [intervalHours, setIntervalHours] = useState(task.intervalHours);
+  const [schedule, setSchedule] = useState<Schedule>(task);
   const [isPending, startTransition] = useTransition();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon-sm" title="Editar">
+          <Button variant="outline" size="sm">
             <Pencil className="size-4" />
+            Editar
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar tarea periódica</DialogTitle>
-          <DialogDescription>Cambiar el título, la descripción o la frecuencia.</DialogDescription>
+          <DialogDescription>Cambiar el título, la descripción o cuándo se repite.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
@@ -59,7 +60,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
             <Label>Descripción (opcional)</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <FrequencyFields initialHours={intervalHours} onChange={setIntervalHours} />
+          <ScheduleFields initial={task} onChange={setSchedule} />
         </div>
 
         <DialogFooter>
@@ -77,7 +78,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
                 const result = await updateMaintenanceTask(task.id, {
                   title,
                   description: description || undefined,
-                  intervalHours,
+                  ...schedule,
                 });
                 if (result.error) {
                   toast.error(result.error);

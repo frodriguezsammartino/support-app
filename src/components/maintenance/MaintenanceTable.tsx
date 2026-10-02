@@ -5,13 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteMaintenanceTask, toggleMaintenanceTaskActive } from "@/lib/actions/maintenance";
-import { describeInterval, MAINTENANCE_STATUS_META, type MaintenanceRow } from "@/lib/maintenance";
+import { deleteMaintenanceTask } from "@/lib/actions/maintenance";
+import { describeSchedule, MAINTENANCE_STATUS_META, type MaintenanceRow } from "@/lib/maintenance";
 import { MaintenanceStatusBadge } from "./MaintenanceStatusBadge";
 import { CompleteMaintenanceDialog } from "./CompleteMaintenanceDialog";
-import { EditMaintenanceTaskDialog } from "./EditMaintenanceTaskDialog";
 import {
   Table,
   TableBody,
@@ -48,18 +47,6 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
     });
   }
 
-  function handleToggleActive(task: MaintenanceRow) {
-    startTransition(async () => {
-      const result = await toggleMaintenanceTaskActive(task.id, !task.active);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(task.active ? "Tarea pausada." : "Tarea reactivada.");
-      router.refresh();
-    });
-  }
-
   return (
     <Card>
       <CardContent className="p-0">
@@ -68,10 +55,10 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
             <TableRow>
               <TableHead className="w-36">Estado</TableHead>
               <TableHead>Tarea</TableHead>
-              <TableHead className="w-40">Frecuencia</TableHead>
+              <TableHead className="w-56">Cuándo se repite</TableHead>
               <TableHead className="w-48">Última vez</TableHead>
               <TableHead className="w-48">Próxima</TableHead>
-              <TableHead className="w-64" />
+              <TableHead className="w-48" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,16 +73,9 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
             {rows.map((task) => {
               const meta = MAINTENANCE_STATUS_META[task.status];
               return (
-                <TableRow
-                  key={task.id}
-                  className={task.active ? meta.rowClass : "opacity-55"}
-                >
+                <TableRow key={task.id} className={meta.rowClass}>
                   <TableCell>
-                    {task.active ? (
-                      <MaintenanceStatusBadge status={task.status} />
-                    ) : (
-                      <span className="text-xs text-zinc-500">Pausada</span>
-                    )}
+                    <MaintenanceStatusBadge status={task.status} />
                   </TableCell>
 
                   <TableCell>
@@ -110,7 +90,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                     )}
                   </TableCell>
 
-                  <TableCell className="text-zinc-600">{describeInterval(task.intervalHours)}</TableCell>
+                  <TableCell className="text-zinc-600">{describeSchedule(task)}</TableCell>
 
                   <TableCell>
                     {task.lastCompletedAt ? (
@@ -131,26 +111,17 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                           : `en ${formatDistanceToNow(task.nextDueAt, { locale: es })}`
                       }
                       sub={format(task.nextDueAt, "dd/MM/yyyy HH:mm")}
-                      className={task.active ? meta.textClass : "text-zinc-500"}
+                      className={meta.textClass}
                     />
                   </TableCell>
 
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      {task.active && (
-                        <CompleteMaintenanceDialog taskId={task.id} taskTitle={task.title} />
-                      )}
-                      <EditMaintenanceTaskDialog task={task} />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        title={task.active ? "Pausar" : "Reactivar"}
-                        disabled={isPending}
-                        onClick={() => handleToggleActive(task)}
-                      >
-                        {task.active ? <Pause className="size-4" /> : <Play className="size-4" />}
-                      </Button>
+                      <CompleteMaintenanceDialog
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        done={task.status === "OK"}
+                      />
                       <Button
                         type="button"
                         variant="ghost"

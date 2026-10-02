@@ -30,11 +30,39 @@ export const createInternalTicketSchema = z.object({
   reporterName: z.string().trim().max(120).optional(),
 });
 
-export const createMaintenanceTaskSchema = z.object({
-  title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
-  description: z.string().trim().optional(),
-  intervalHours: z.coerce.number().int().min(1, "El intervalo debe ser de al menos 1 hora").max(8760),
-});
+export const createMaintenanceTaskSchema = z
+  .object({
+    title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
+    description: z.string().trim().optional(),
+    scheduleType: z.enum(["INTERVAL", "DAILY", "WEEKLY", "MONTHLY_DAY", "MONTHLY_NTH_WEEKDAY"]),
+    intervalHours: z.coerce
+      .number()
+      .int()
+      .min(1, "El intervalo debe ser de al menos 1 hora")
+      .max(8760),
+    timeOfDay: z.coerce.number().int().min(0).max(1439).nullable().optional(),
+    weekday: z.coerce.number().int().min(0).max(6).nullable().optional(),
+    monthDay: z.coerce.number().int().min(1).max(31).nullable().optional(),
+    nthWeek: z.coerce.number().int().min(1).max(5).nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    const needsTime = value.scheduleType !== "INTERVAL";
+    if (needsTime && value.timeOfDay == null) {
+      ctx.addIssue({ code: "custom", message: "Elegí a qué hora", path: ["timeOfDay"] });
+    }
+    if (
+      (value.scheduleType === "WEEKLY" || value.scheduleType === "MONTHLY_NTH_WEEKDAY") &&
+      value.weekday == null
+    ) {
+      ctx.addIssue({ code: "custom", message: "Elegí el día de la semana", path: ["weekday"] });
+    }
+    if (value.scheduleType === "MONTHLY_DAY" && value.monthDay == null) {
+      ctx.addIssue({ code: "custom", message: "Elegí el día del mes", path: ["monthDay"] });
+    }
+    if (value.scheduleType === "MONTHLY_NTH_WEEKDAY" && value.nthWeek == null) {
+      ctx.addIssue({ code: "custom", message: "Elegí qué semana del mes", path: ["nthWeek"] });
+    }
+  });
 
 export const updateMaintenanceTaskSchema = createMaintenanceTaskSchema;
 

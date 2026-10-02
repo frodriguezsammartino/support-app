@@ -11,12 +11,8 @@ export default async function MantenimientoPage() {
 
   const rows = tasks.map((task) => toMaintenanceRow(task, task._count.completions));
 
-  // Las activas primero, y dentro de ellas lo que vence antes arriba: así la primera
-  // fila siempre es la que hay que atender.
-  const sorted = [...rows].sort((a, b) => {
-    if (a.active !== b.active) return a.active ? -1 : 1;
-    return a.nextDueAt.getTime() - b.nextDueAt.getTime();
-  });
+  // Lo que vence antes va arriba: la primera fila siempre es la que hay que atender.
+  const sorted = [...rows].sort((a, b) => a.nextDueAt.getTime() - b.nextDueAt.getTime());
 
   return (
     <div className="flex flex-col gap-4">

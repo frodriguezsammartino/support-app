@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
+import { nominalIntervalHours, type ScheduleType } from "@/lib/maintenance";
 import {
   completeMaintenanceTaskSchema,
   createMaintenanceTaskSchema,
@@ -11,11 +12,38 @@ import {
 
 export type ActionResult = { error?: string };
 
-export async function createMaintenanceTask(input: {
+export type MaintenanceTaskInput = {
   title: string;
   description?: string;
+  scheduleType: ScheduleType;
   intervalHours: number;
-}): Promise<ActionResult> {
+  timeOfDay?: number | null;
+  weekday?: number | null;
+  monthDay?: number | null;
+  nthWeek?: number | null;
+};
+
+/** Normaliza la agenda: deja en null los campos que no aplican al tipo elegido. */
+function toScheduleData(data: MaintenanceTaskInput) {
+  const type = data.scheduleType;
+  const isCalendar = type !== "INTERVAL";
+  return {
+    scheduleType: type,
+    intervalHours: nominalIntervalHours(type, data.intervalHours),
+    timeOfDay: isCalendar ? data.timeOfDay ?? 0 : null,
+    weekday: type === "WEEKLY" || type === "MONTHLY_NTH_WEEKDAY" ? data.weekday ?? 1 : null,
+    monthDay: type === "MONTHLY_DAY" ? data.monthDay ?? 1 : null,
+    nthWeek: type === "MONTHLY_NTH_WEEKDAY" ? data.nthWeek ?? 1 : null,
+  };
+}
+
+function revalidateMaintenance(taskId?: string) {
+  revalidatePath("/admin/mantenimiento");
+  if (taskId) revalidatePath(`/admin/mantenimiento/${taskId}`);
+  revalidatePath("/admin/dashboard");
+}
+
+export async function createMaintenanceTask(input: MaintenanceTaskInput): Promise<ActionResult> {
   await requireAdmin();
 
   const parsed = createMaintenanceTaskSchema.safeParse(input);
@@ -27,17 +55,17 @@ export async function createMaintenanceTask(input: {
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
-      intervalHours: parsed.data.intervalHours,
+      ...toScheduleData(parsed.data),
     },
   });
 
-  revalidatePath("/admin/mantenimiento", "layout");
+  revalidateMaintenance();
   return {};
 }
 
 export async function updateMaintenanceTask(
   taskId: string,
-  input: { title: string; description?: string; intervalHours: number }
+  input: MaintenanceTaskInput
 ): Promise<ActionResult> {
   await requireAdmin();
 
@@ -51,11 +79,11 @@ export async function updateMaintenanceTask(
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
-      intervalHours: parsed.data.intervalHours,
+      ...toScheduleData(parsed.data),
     },
   });
 
-  revalidatePath("/admin/mantenimiento", "layout");
+  revalidateMaintenance(taskId);
   return {};
 }
 
@@ -76,16 +104,7 @@ export async function completeMaintenanceTask(taskId: string, note?: string): Pr
     },
   });
 
-  revalidatePath("/admin/mantenimiento", "layout");
-  return {};
-}
-
-export async function toggleMaintenanceTaskActive(taskId: string, active: boolean): Promise<ActionResult> {
-  await requireAdmin();
-
-  await db.maintenanceTask.update({ where: { id: taskId }, data: { active } });
-
-  revalidatePath("/admin/mantenimiento", "layout");
+  revalidateMaintenance(taskId);
   return {};
 }
 
@@ -94,6 +113,6 @@ export async function deleteMaintenanceTask(taskId: string): Promise<ActionResul
 
   await db.maintenanceTask.delete({ where: { id: taskId } });
 
-  revalidatePath("/admin/mantenimiento", "layout");
+  revalidateMaintenance(taskId);
   return {};
 }

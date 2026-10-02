@@ -16,17 +16,17 @@ import {
 
 /** Ordenado de más específico a más general: gana el primer prefijo que matchea. */
 const SECTIONS: { prefix: string; label: string }[] = [
-  { prefix: "/admin/mantenimiento", label: "Mantenimiento" },
+  { prefix: "/admin/mantenimiento", label: "Panel de Mantenimiento" },
   { prefix: "/admin/dashboard", label: "Dashboard" },
   { prefix: "/admin/tickets", label: "Ticket" },
-  { prefix: "/admin", label: "Inicio" },
+  { prefix: "/admin", label: "Panel de Tareas" },
 ];
 
 function sectionLabel(pathname: string) {
   const match = SECTIONS.find(
     ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
-  return match?.label ?? "Inicio";
+  return match?.label ?? "Panel de Tareas";
 }
 
 export function AdminHeader() {
@@ -47,14 +47,14 @@ export function AdminHeader() {
               </Button>
             }
           />
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuItem render={<Link href="/admin" />}>
               <Home className="size-4" />
-              Home
+              Panel de Tareas
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/admin/mantenimiento" />}>
               <Wrench className="size-4" />
-              Mantenimiento
+              Panel de Mantenimiento
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/admin/dashboard" />}>
               <BarChart3 className="size-4" />

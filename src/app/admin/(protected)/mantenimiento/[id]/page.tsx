@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
-import { describeInterval, MAINTENANCE_STATUS_META, toMaintenanceRow } from "@/lib/maintenance";
+import { describeSchedule, MAINTENANCE_STATUS_META, toMaintenanceRow } from "@/lib/maintenance";
 import { MaintenanceStatusBadge } from "@/components/maintenance/MaintenanceStatusBadge";
 import { CompleteMaintenanceDialog } from "@/components/maintenance/CompleteMaintenanceDialog";
 import { EditMaintenanceTaskDialog } from "@/components/maintenance/EditMaintenanceTaskDialog";
@@ -28,7 +28,7 @@ export default async function MaintenanceTaskDetailPage(
 
   const row = toMaintenanceRow(task, task._count.completions);
   const meta = MAINTENANCE_STATUS_META[row.status];
-  const borderClass = row.active ? meta.dot.replace("bg-", "border-t-") : "border-t-zinc-300";
+  const borderClass = meta.dot.replace("bg-", "border-t-");
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
@@ -44,11 +44,7 @@ export default async function MaintenanceTaskDetailPage(
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <CardTitle className="text-xl">{task.title}</CardTitle>
-            {row.active ? (
-              <MaintenanceStatusBadge status={row.status} />
-            ) : (
-              <span className="text-sm text-zinc-500">Pausada</span>
-            )}
+            <MaintenanceStatusBadge status={row.status} />
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -58,8 +54,8 @@ export default async function MaintenanceTaskDetailPage(
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Frecuencia</p>
-              <p className="text-sm font-medium">{describeInterval(task.intervalHours)}</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Cuándo se repite</p>
+              <p className="text-sm font-medium">{describeSchedule(task)}</p>
             </div>
             <div className="rounded-lg border bg-zinc-50/60 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Última vez</p>
@@ -78,7 +74,7 @@ export default async function MaintenanceTaskDetailPage(
             </div>
             <div className="rounded-lg border bg-zinc-50/60 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Próxima</p>
-              <p className={`text-sm ${row.active ? meta.textClass : "text-zinc-500"}`}>
+              <p className={`text-sm ${meta.textClass}`}>
                 {row.status === "OVERDUE"
                   ? `venció hace ${formatDistanceToNow(row.nextDueAt, { locale: es })}`
                   : `en ${formatDistanceToNow(row.nextDueAt, { locale: es })}`}
@@ -90,7 +86,11 @@ export default async function MaintenanceTaskDetailPage(
           <Separator />
 
           <div className="flex items-center gap-2">
-            {row.active && <CompleteMaintenanceDialog taskId={task.id} taskTitle={task.title} />}
+            <CompleteMaintenanceDialog
+              taskId={task.id}
+              taskTitle={task.title}
+              done={row.status === "OK"}
+            />
             <EditMaintenanceTaskDialog task={task} />
           </div>
         </CardContent>

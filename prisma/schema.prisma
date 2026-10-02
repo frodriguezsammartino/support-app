@@ -75,11 +75,34 @@ model TicketStatusHistory {
   @@index([ticketId])
 }
 
+enum MaintenanceScheduleType {
+  INTERVAL
+  DAILY
+  WEEKLY
+  MONTHLY_DAY
+  MONTHLY_NTH_WEEKDAY
+}
+
 model MaintenanceTask {
-  id              String    @id @default(cuid())
-  title           String
-  description     String?
-  intervalHours   Int
+  id           String                  @id @default(cuid())
+  title        String
+  description  String?
+  scheduleType MaintenanceScheduleType @default(INTERVAL)
+
+  /// Período nominal en horas. Para INTERVAL es la frecuencia real; para los demás
+  /// tipos es el período aproximado (24 / 168 / 720) y solo se usa para decidir
+  /// con cuánta anticipación una tarea pasa a "vence pronto".
+  intervalHours Int
+
+  /// Minutos desde la medianoche, en hora de la clínica. Solo para los tipos de calendario.
+  timeOfDay Int?
+  /// 0 = domingo .. 6 = sábado. Para WEEKLY y MONTHLY_NTH_WEEKDAY.
+  weekday   Int?
+  /// 1..31, se recorta al último día del mes cuando no existe. Para MONTHLY_DAY.
+  monthDay  Int?
+  /// 1..4, o 5 = "el último". Para MONTHLY_NTH_WEEKDAY.
+  nthWeek   Int?
+
   active          Boolean   @default(true)
   lastCompletedAt DateTime?
   createdAt       DateTime  @default(now())

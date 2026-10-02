@@ -12,8 +12,7 @@ const COUNTERS = [
 ] as const;
 
 export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
-  const active = rows.filter((r) => r.active);
-  const next = [...active].sort((a, b) => a.nextDueAt.getTime() - b.nextDueAt.getTime())[0];
+  const next = [...rows].sort((a, b) => a.nextDueAt.getTime() - b.nextDueAt.getTime())[0];
 
   return (
     <Card className="border-t-4 border-t-blue-600">
@@ -43,7 +42,7 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
                 </span>
               </>
             ) : (
-              <span className="text-sm text-zinc-500">No hay tareas activas todavía.</span>
+              <span className="text-sm text-zinc-500">Todavía no cargaste ninguna tarea.</span>
             )}
           </div>
         </div>
@@ -51,7 +50,7 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
         <div className="flex gap-2">
           {COUNTERS.map(({ key, label }) => {
             const meta = MAINTENANCE_STATUS_META[key];
-            const count = active.filter((r) => r.status === key).length;
+            const count = rows.filter((r) => r.status === key).length;
             return (
               <div
                 key={key}

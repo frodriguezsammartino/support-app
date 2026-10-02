@@ -17,7 +17,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-export function CompleteMaintenanceDialog({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
+export function CompleteMaintenanceDialog({
+  taskId,
+  taskTitle,
+  done = false,
+}: {
+  taskId: string;
+  taskTitle: string;
+  /** Ya se hizo en este ciclo: el botón pasa a verde para no volver a hacerla al pedo. */
+  done?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -33,9 +42,18 @@ export function CompleteMaintenanceDialog({ taskId, taskTitle }: { taskId: strin
     >
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" title="Registrar que la hiciste">
+          <Button
+            variant="outline"
+            size="sm"
+            title={done ? "Ya se hizo. Podés registrarla de nuevo si hace falta." : "Registrar que la hiciste"}
+            className={
+              done
+                ? "border-[#0ca30c] bg-[#0ca30c]/10 text-[#0ca30c] hover:bg-[#0ca30c]/20 hover:text-[#0ca30c]"
+                : undefined
+            }
+          >
             <CheckCircle2 className="size-4" />
-            Marcar hecho
+            {done ? "Hecha" : "Marcar hecho"}
           </Button>
         }
       />

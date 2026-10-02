@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createMaintenanceTask } from "@/lib/actions/maintenance";
-import { DAY_HOURS } from "@/lib/maintenance";
-import { FrequencyFields } from "./FrequencyFields";
+import type { Schedule } from "@/lib/maintenance";
+import { DEFAULT_SCHEDULE, ScheduleFields } from "./ScheduleFields";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +26,13 @@ export function NewMaintenanceTaskDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [intervalHours, setIntervalHours] = useState(DAY_HOURS);
+  const [schedule, setSchedule] = useState<Schedule>(DEFAULT_SCHEDULE);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
     setTitle("");
     setDescription("");
-    setIntervalHours(DAY_HOURS);
+    setSchedule(DEFAULT_SCHEDULE);
   }
 
   return (
@@ -54,19 +54,26 @@ export function NewMaintenanceTaskDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nueva tarea periódica</DialogTitle>
-          <DialogDescription>Un control recurrente, como actualizar servidores o chequear antivirus.</DialogDescription>
+          <DialogDescription>
+            Un control recurrente, como actualizar servidores o chequear antivirus.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             <Label>Tarea</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Actualizar servidores" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ej: Actualizar servidores"
+            />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Descripción (opcional)</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <FrequencyFields initialHours={intervalHours} onChange={setIntervalHours} />
+          {/* La key fuerza el remonte al reabrir, para que el formulario arranque limpio. */}
+          <ScheduleFields key={open ? "open" : "closed"} onChange={setSchedule} />
         </div>
 
         <DialogFooter>
@@ -84,7 +91,7 @@ export function NewMaintenanceTaskDialog() {
                 const result = await createMaintenanceTask({
                   title,
                   description: description || undefined,
-                  intervalHours,
+                  ...schedule,
                 });
                 if (result.error) {
                   toast.error(result.error);
@@ -92,6 +99,7 @@ export function NewMaintenanceTaskDialog() {
                 }
                 reset();
                 setOpen(false);
+                toast.success("Tarea creada.");
                 router.refresh();
               });
             }}
