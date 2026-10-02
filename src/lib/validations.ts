@@ -34,33 +34,30 @@ export const createMaintenanceTaskSchema = z
   .object({
     title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
     description: z.string().trim().optional(),
-    scheduleType: z.enum(["INTERVAL", "DAILY", "WEEKLY", "MONTHLY_DAY", "MONTHLY_NTH_WEEKDAY"]),
-    intervalHours: z.coerce
-      .number()
-      .int()
-      .min(1, "El intervalo debe ser de al menos 1 hora")
-      .max(8760),
+    freq: z.enum(["HOUR", "DAY", "WEEK", "MONTH", "YEAR"]),
+    interval: z.coerce.number().int().min(1, "Tiene que repetirse al menos cada 1").max(999),
     timeOfDay: z.coerce.number().int().min(0).max(1439).nullable().optional(),
-    weekday: z.coerce.number().int().min(0).max(6).nullable().optional(),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).default([]),
+    monthlyMode: z.enum(["DAY_OF_MONTH", "NTH_WEEKDAY"]).nullable().optional(),
     monthDay: z.coerce.number().int().min(1).max(31).nullable().optional(),
     nthWeek: z.coerce.number().int().min(1).max(5).nullable().optional(),
+    monthOfYear: z.coerce.number().int().min(0).max(11).nullable().optional(),
+    endType: z.enum(["NEVER", "ON_DATE", "AFTER_COUNT"]),
+    endDate: z.coerce.date().nullable().optional(),
+    endCount: z.coerce.number().int().min(1).max(999).nullable().optional(),
   })
   .superRefine((value, ctx) => {
-    const needsTime = value.scheduleType !== "INTERVAL";
-    if (needsTime && value.timeOfDay == null) {
+    if (value.freq === "WEEK" && value.weekdays.length === 0) {
+      ctx.addIssue({ code: "custom", message: "Elegí al menos un día de la semana", path: ["weekdays"] });
+    }
+    if (value.freq !== "HOUR" && value.timeOfDay == null) {
       ctx.addIssue({ code: "custom", message: "Elegí a qué hora", path: ["timeOfDay"] });
     }
-    if (
-      (value.scheduleType === "WEEKLY" || value.scheduleType === "MONTHLY_NTH_WEEKDAY") &&
-      value.weekday == null
-    ) {
-      ctx.addIssue({ code: "custom", message: "Elegí el día de la semana", path: ["weekday"] });
+    if (value.endType === "ON_DATE" && value.endDate == null) {
+      ctx.addIssue({ code: "custom", message: "Elegí hasta qué día se repite", path: ["endDate"] });
     }
-    if (value.scheduleType === "MONTHLY_DAY" && value.monthDay == null) {
-      ctx.addIssue({ code: "custom", message: "Elegí el día del mes", path: ["monthDay"] });
-    }
-    if (value.scheduleType === "MONTHLY_NTH_WEEKDAY" && value.nthWeek == null) {
-      ctx.addIssue({ code: "custom", message: "Elegí qué semana del mes", path: ["nthWeek"] });
+    if (value.endType === "AFTER_COUNT" && value.endCount == null) {
+      ctx.addIssue({ code: "custom", message: "Elegí cuántas repeticiones", path: ["endCount"] });
     }
   });
 

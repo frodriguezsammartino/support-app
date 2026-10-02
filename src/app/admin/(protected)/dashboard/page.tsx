@@ -57,12 +57,12 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
     getMaintenanceWeeklyTrend(filters),
     getMaintenanceCompletionCount(filters),
     getOldestOpenTicketAgeHours(filters),
-    db.maintenanceTask.findMany(),
+    db.maintenanceTask.findMany({ include: { _count: { select: { completions: true } } } }),
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
   const maintenanceOverdue = maintenanceTasks.filter(
-    (t) => getMaintenanceStatus(t) === "OVERDUE"
+    (t) => getMaintenanceStatus(t, t._count.completions) === "OVERDUE"
   ).length;
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;
 

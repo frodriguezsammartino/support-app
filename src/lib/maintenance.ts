@@ -1,8 +1,5 @@
 export const DUE_SOON_RATIO = 0.2;
 export const HOUR_MS = 3_600_000;
-export const DAY_HOURS = 24;
-export const WEEK_HOURS = 168;
-export const MONTH_HOURS = 720;
 
 /**
  * La clínica está en Argentina, que no tiene horario de verano: el offset es
@@ -11,7 +8,10 @@ export const MONTH_HOURS = 720;
  */
 const CLINIC_OFFSET_MS = -3 * HOUR_MS;
 
-export type MaintenanceStatusKey = "OK" | "DUE_SOON" | "OVERDUE";
+/** Tope de ciclos a recorrer al buscar la próxima ocurrencia. Nunca debería hacer falta. */
+const MAX_CYCLES = 500;
+
+export type MaintenanceStatusKey = "OK" | "DUE_SOON" | "OVERDUE" | "FINISHED";
 
 export const MAINTENANCE_STATUS_META: Record<
   MaintenanceStatusKey,
@@ -38,22 +38,40 @@ export const MAINTENANCE_STATUS_META: Record<
     rowClass: "bg-red-50/70 hover:bg-red-50",
     textClass: "text-red-700 font-medium",
   },
+  FINISHED: {
+    label: "Terminada",
+    badgeClass: "bg-zinc-500 text-white border-transparent",
+    dot: "bg-zinc-400",
+    rowClass: "opacity-60",
+    textClass: "text-zinc-500",
+  },
 };
 
-export type ScheduleType =
-  | "INTERVAL"
-  | "DAILY"
-  | "WEEKLY"
-  | "MONTHLY_DAY"
-  | "MONTHLY_NTH_WEEKDAY";
+export type Freq = "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+export type MonthlyMode = "DAY_OF_MONTH" | "NTH_WEEKDAY";
+export type EndType = "NEVER" | "ON_DATE" | "AFTER_COUNT";
 
-export const SCHEDULE_TYPE_LABELS: Record<ScheduleType, string> = {
+export const FREQ_UNIT_LABELS: Record<Freq, { one: string; many: string }> = {
+  HOUR: { one: "hora", many: "horas" },
+  DAY: { one: "día", many: "días" },
+  WEEK: { one: "semana", many: "semanas" },
+  MONTH: { one: "mes", many: "meses" },
+  YEAR: { one: "año", many: "años" },
+};
+
+/** Etiquetas de los presets, al estilo del calendario. */
+export const PRESET_LABELS = {
   DAILY: "Todos los días",
-  WEEKLY: "Un día fijo de la semana",
-  MONTHLY_DAY: "Un día fijo del mes",
-  MONTHLY_NTH_WEEKDAY: "Un día de semana del mes",
-  INTERVAL: "Cada X horas / días",
-};
+  WEEKLY: "Todas las semanas",
+  MONTHLY: "Todos los meses",
+  YEARLY: "Todos los años",
+  CUSTOM: "Personalizado...",
+} as const;
+
+export type PresetKey = keyof typeof PRESET_LABELS;
+
+/** Iniciales para el selector D L M M J V S (índice = día de la semana). */
+export const WEEKDAY_INITIALS = ["D", "L", "M", "M", "J", "V", "S"];
 
 export const WEEKDAY_LABELS = [
   "domingo",
@@ -65,7 +83,6 @@ export const WEEKDAY_LABELS = [
   "sábado",
 ];
 
-/** Solo sábado y domingo cambian en plural; el resto son invariantes. */
 export const WEEKDAY_PLURALS = [
   "domingos",
   "lunes",
@@ -76,6 +93,21 @@ export const WEEKDAY_PLURALS = [
   "sábados",
 ];
 
+export const MONTH_LABELS = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
 export const NTH_WEEK_LABELS: Record<number, string> = {
   1: "primer",
   2: "segundo",
@@ -84,18 +116,38 @@ export const NTH_WEEK_LABELS: Record<number, string> = {
   5: "último",
 };
 
-export type Schedule = {
-  scheduleType: ScheduleType;
-  intervalHours: number;
+export type Recurrence = {
+  freq: Freq;
+  interval: number;
   timeOfDay: number | null;
-  weekday: number | null;
+  weekdays: number[];
+  monthlyMode: MonthlyMode | null;
   monthDay: number | null;
   nthWeek: number | null;
+  monthOfYear: number | null;
+  endType: EndType;
+  endDate: Date | null;
+  endCount: number | null;
 };
 
-type TaskLike = Schedule & { lastCompletedAt: Date | null; createdAt: Date };
+/** Igual que Recurrence pero tolerando `undefined` en los opcionales: es lo que devuelve Zod. */
+export type RecurrenceInput = Omit<
+  Recurrence,
+  "timeOfDay" | "monthlyMode" | "monthDay" | "nthWeek" | "monthOfYear" | "endDate" | "endCount"
+> & {
+  timeOfDay?: number | null;
+  monthlyMode?: MonthlyMode | null;
+  monthDay?: number | null;
+  nthWeek?: number | null;
+  monthOfYear?: number | null;
+  endDate?: Date | null;
+  endCount?: number | null;
+};
 
-/** Campos de fecha leídos en hora de la clínica. */
+type TaskLike = Recurrence & { createdAt: Date; lastCompletedAt: Date | null };
+
+// ------------------------------------------------------------------ fecha y hora
+
 function clinicParts(instant: Date) {
   const shifted = new Date(instant.getTime() + CLINIC_OFFSET_MS);
   return {
@@ -103,6 +155,7 @@ function clinicParts(instant: Date) {
     month: shifted.getUTCMonth(),
     day: shifted.getUTCDate(),
     weekday: shifted.getUTCDay(),
+    minutesOfDay: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
   };
 }
 
@@ -119,7 +172,7 @@ function weekdayOf(year: number, month: number, day: number) {
   return new Date(Date.UTC(year, month, day)).getUTCDay();
 }
 
-/** El día `nth` de semana `weekday` del mes; nth = 5 significa el último. */
+/** El día `nth` de semana `weekday` del mes; nth >= 5 significa el último. */
 function nthWeekdayInstant(
   year: number,
   month: number,
@@ -137,139 +190,217 @@ function nthWeekdayInstant(
   return clinicInstant(year, month, 1 + offset + (nth - 1) * 7, minutes);
 }
 
-/**
- * Próximo vencimiento: la primera ocurrencia de la agenda posterior a la última vez
- * que se hizo (o a la creación, si nunca se hizo). Se calcula al vuelo y nunca se
- * persiste, así editar la frecuencia no deja fechas viejas dando vueltas.
- */
-export function getNextDueAt(task: TaskLike): Date {
-  const base = task.lastCompletedAt ?? task.createdAt;
-  const minutes = task.timeOfDay ?? 0;
-  const { year, month, day } = clinicParts(base);
+// -------------------------------------------------------------------- ocurrencias
 
-  switch (task.scheduleType) {
-    case "DAILY": {
-      const today = clinicInstant(year, month, day, minutes);
-      return today > base ? today : clinicInstant(year, month, day + 1, minutes);
+/** Las ocurrencias de un ciclo. Solo la frecuencia semanal puede dar más de una. */
+function cycleOccurrences(task: TaskLike, anchor: Date, minutes: number, cycle: number): Date[] {
+  const { year, month, day, weekday } = clinicParts(anchor);
+  const step = Math.max(1, task.interval);
+
+  switch (task.freq) {
+    case "HOUR":
+      return [new Date(anchor.getTime() + cycle * step * HOUR_MS)];
+
+    case "DAY":
+      return [clinicInstant(year, month, day + cycle * step, minutes)];
+
+    case "WEEK": {
+      const days = task.weekdays.length ? [...task.weekdays].sort((a, b) => a - b) : [weekday];
+      const weekStart = day - weekday;
+      return days.map((wd) =>
+        clinicInstant(year, month, weekStart + cycle * step * 7 + wd, minutes)
+      );
     }
 
-    case "WEEKLY": {
-      const target = task.weekday ?? 1;
-      for (let i = 0; i <= 7; i++) {
-        const candidate = clinicInstant(year, month, day + i, minutes);
-        if (candidate > base && clinicParts(candidate).weekday === target) return candidate;
+    case "MONTH": {
+      const m = month + cycle * step;
+      if (task.monthlyMode === "NTH_WEEKDAY") {
+        return [nthWeekdayInstant(year, m, task.nthWeek ?? 1, task.weekdays[0] ?? weekday, minutes)];
       }
-      break;
+      const target = task.monthDay ?? day;
+      return [clinicInstant(year, m, Math.min(target, daysInMonth(year, m)), minutes)];
     }
 
-    case "MONTHLY_DAY": {
-      const target = task.monthDay ?? 1;
-      for (let i = 0; i <= 2; i++) {
-        const candidate = clinicInstant(
-          year,
-          month + i,
-          Math.min(target, daysInMonth(year, month + i)),
-          minutes
-        );
-        if (candidate > base) return candidate;
-      }
-      break;
-    }
-
-    case "MONTHLY_NTH_WEEKDAY": {
-      for (let i = 0; i <= 2; i++) {
-        const candidate = nthWeekdayInstant(
-          year,
-          month + i,
-          task.nthWeek ?? 1,
-          task.weekday ?? 1,
-          minutes
-        );
-        if (candidate > base) return candidate;
-      }
-      break;
+    case "YEAR": {
+      const y = year + cycle * step;
+      const m = task.monthOfYear ?? month;
+      const target = task.monthDay ?? day;
+      return [clinicInstant(y, m, Math.min(target, daysInMonth(y, m)), minutes)];
     }
   }
-
-  return new Date(base.getTime() + task.intervalHours * HOUR_MS);
 }
 
-export function getMaintenanceStatus(task: TaskLike): MaintenanceStatusKey {
+/** Salto inicial aproximado, para no recorrer ciclo por ciclo desde la creación. */
+function estimateCycle(task: TaskLike, anchor: Date, after: Date): number {
+  const step = Math.max(1, task.interval);
+  const a = clinicParts(anchor);
+  const b = clinicParts(after);
+  const dayDiff = Math.floor(
+    (Date.UTC(b.year, b.month, b.day) - Date.UTC(a.year, a.month, a.day)) / (24 * HOUR_MS)
+  );
+
+  let raw: number;
+  switch (task.freq) {
+    case "HOUR":
+      raw = (after.getTime() - anchor.getTime()) / (step * HOUR_MS);
+      break;
+    case "DAY":
+      raw = dayDiff / step;
+      break;
+    case "WEEK":
+      raw = dayDiff / (step * 7);
+      break;
+    case "MONTH":
+      raw = ((b.year - a.year) * 12 + (b.month - a.month)) / step;
+      break;
+    case "YEAR":
+      raw = (b.year - a.year) / step;
+      break;
+  }
+
+  // Un ciclo de colchón: la estimación puede quedar corta por el día del mes o la hora.
+  return Math.max(0, Math.floor(raw) - 1);
+}
+
+/** Primera ocurrencia estrictamente posterior a `after`. */
+function firstOccurrenceAfter(task: TaskLike, after: Date): Date {
+  const anchor = task.createdAt;
+  const minutes = task.timeOfDay ?? clinicParts(anchor).minutesOfDay;
+  const start = estimateCycle(task, anchor, after);
+
+  let last: Date | null = null;
+  for (let cycle = start; cycle < start + MAX_CYCLES; cycle++) {
+    for (const occurrence of cycleOccurrences(task, anchor, minutes, cycle)) {
+      if (occurrence > after) return occurrence;
+      last = occurrence;
+    }
+  }
+  return last ?? after;
+}
+
+/**
+ * Próximo vencimiento: la primera ocurrencia posterior a la última vez que se hizo.
+ * Si nunca se hizo, la primera de la serie. Se calcula al vuelo y nunca se persiste,
+ * así editar la repetición no deja fechas viejas dando vueltas.
+ */
+export function getNextDueAt(task: TaskLike): Date {
+  if (task.lastCompletedAt) return firstOccurrenceAfter(task, task.lastCompletedAt);
+
+  const minutes = task.timeOfDay ?? clinicParts(task.createdAt).minutesOfDay;
+  const first = cycleOccurrences(task, task.createdAt, minutes, 0)[0];
+  // La primera ocurrencia del ciclo 0 puede caer antes de la creación (por ejemplo el
+  // lunes de la semana en que se creó la tarea): en ese caso vale la siguiente.
+  if (first >= task.createdAt) return first;
+  return firstOccurrenceAfter(task, task.createdAt);
+}
+
+/** ¿La repetición ya terminó? Depende del "finaliza" elegido. */
+export function hasFinished(task: TaskLike, completionCount: number): boolean {
+  if (task.endType === "AFTER_COUNT") {
+    return task.endCount != null && completionCount >= task.endCount;
+  }
+  if (task.endType === "ON_DATE") {
+    return task.endDate != null && getNextDueAt(task) > task.endDate;
+  }
+  return false;
+}
+
+/** Período nominal en horas: con cuánta anticipación avisar que vence. */
+export function nominalPeriodHours(freq: Freq, interval: number): number {
+  const step = Math.max(1, interval);
+  switch (freq) {
+    case "HOUR":
+      return step;
+    case "DAY":
+      return step * 24;
+    case "WEEK":
+      return step * 168;
+    case "MONTH":
+      return step * 720;
+    case "YEAR":
+      return step * 8760;
+  }
+}
+
+export function getMaintenanceStatus(task: TaskLike, completionCount = 0): MaintenanceStatusKey {
+  if (hasFinished(task, completionCount)) return "FINISHED";
+
   const nextDueAt = getNextDueAt(task).getTime();
-  const dueSoonFrom = nextDueAt - task.intervalHours * HOUR_MS * DUE_SOON_RATIO;
+  const period = nominalPeriodHours(task.freq, task.interval) * HOUR_MS;
   const now = Date.now();
   if (now >= nextDueAt) return "OVERDUE";
-  if (now >= dueSoonFrom) return "DUE_SOON";
+  if (now >= nextDueAt - period * DUE_SOON_RATIO) return "DUE_SOON";
   return "OK";
 }
 
-function formatTime(minutes: number) {
+// ------------------------------------------------------------------------ textos
+
+export function formatTimeOfDay(minutes: number) {
   const h = String(Math.floor(minutes / 60)).padStart(2, "0");
   const m = String(minutes % 60).padStart(2, "0");
   return `${h}:${m}`;
 }
 
-export function describeInterval(hours: number): string {
-  if (hours === DAY_HOURS) return "Cada 24hs";
-  if (hours === WEEK_HOURS) return "Cada 7 días";
-  if (hours % WEEK_HOURS === 0) return `Cada ${hours / WEEK_HOURS} semanas`;
-  if (hours % DAY_HOURS === 0) return `Cada ${hours / DAY_HOURS} días`;
-  return `Cada ${hours}hs`;
+function joinWithY(items: string[]) {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
 }
 
-export function describeSchedule(schedule: Schedule): string {
-  const at = schedule.timeOfDay != null ? ` a las ${formatTime(schedule.timeOfDay)}` : "";
+function describeEnd(task: Recurrence) {
+  if (task.endType === "ON_DATE" && task.endDate) {
+    const p = clinicParts(task.endDate);
+    const d = String(p.day).padStart(2, "0");
+    const m = String(p.month + 1).padStart(2, "0");
+    return ` · hasta el ${d}/${m}/${p.year}`;
+  }
+  if (task.endType === "AFTER_COUNT" && task.endCount) {
+    return ` · ${task.endCount} ${task.endCount === 1 ? "vez" : "veces"}`;
+  }
+  return "";
+}
 
-  switch (schedule.scheduleType) {
-    case "DAILY":
-      return `Todos los días${at}`;
-    case "WEEKLY":
-      return `Todos los ${WEEKDAY_PLURALS[schedule.weekday ?? 1]}${at}`;
-    case "MONTHLY_DAY":
-      return `El ${schedule.monthDay ?? 1} de cada mes${at}`;
-    case "MONTHLY_NTH_WEEKDAY": {
-      const nth = NTH_WEEK_LABELS[schedule.nthWeek ?? 1] ?? "primer";
-      return `El ${nth} ${WEEKDAY_LABELS[schedule.weekday ?? 1]} de cada mes${at}`;
+export function describeRecurrence(task: Recurrence): string {
+  const step = Math.max(1, task.interval);
+  const at = task.timeOfDay != null ? ` a las ${formatTimeOfDay(task.timeOfDay)}` : "";
+  const every = step === 1 ? null : `Cada ${step} ${FREQ_UNIT_LABELS[task.freq].many}`;
+
+  switch (task.freq) {
+    case "HOUR":
+      return (step === 1 ? "Cada hora" : `Cada ${step} horas`) + describeEnd(task);
+
+    case "DAY":
+      return `${every ?? "Todos los días"}${at}${describeEnd(task)}`;
+
+    case "WEEK": {
+      const days = [...task.weekdays].sort((a, b) => a - b).map((d) => WEEKDAY_PLURALS[d]);
+      const which = days.length ? ` los ${joinWithY(days)}` : "";
+      return `${every ?? "Todas las semanas"}${which}${at}${describeEnd(task)}`;
     }
-    default:
-      return describeInterval(schedule.intervalHours);
+
+    case "MONTH": {
+      const which =
+        task.monthlyMode === "NTH_WEEKDAY"
+          ? ` el ${NTH_WEEK_LABELS[task.nthWeek ?? 1] ?? "primer"} ${
+              WEEKDAY_LABELS[task.weekdays[0] ?? 1]
+            }`
+          : ` el día ${task.monthDay ?? 1}`;
+      return `${every ?? "Todos los meses"}${which}${at}${describeEnd(task)}`;
+    }
+
+    case "YEAR": {
+      const which = ` el ${task.monthDay ?? 1} de ${MONTH_LABELS[task.monthOfYear ?? 0]}`;
+      return `${every ?? "Todos los años"}${which}${at}${describeEnd(task)}`;
+    }
   }
 }
 
-/** Período nominal que usa el umbral de "vence pronto". */
-export function nominalIntervalHours(scheduleType: ScheduleType, intervalHours: number): number {
-  switch (scheduleType) {
-    case "DAILY":
-      return DAY_HOURS;
-    case "WEEKLY":
-      return WEEK_HOURS;
-    case "MONTHLY_DAY":
-    case "MONTHLY_NTH_WEEKDAY":
-      return MONTH_HOURS;
-    default:
-      return intervalHours;
-  }
-}
-
-export type FrequencyUnit = "HOURS" | "DAYS" | "WEEKS";
-
-export function unitToHours(value: number, unit: FrequencyUnit): number {
-  const factor = unit === "HOURS" ? 1 : unit === "DAYS" ? DAY_HOURS : WEEK_HOURS;
-  return Math.round(value * factor);
-}
-
-/** Para precargar el formulario de edición: desglosa horas en la unidad más grande que divide exacto. */
-export function hoursToUnit(hours: number): { value: number; unit: FrequencyUnit } {
-  if (hours % WEEK_HOURS === 0) return { value: hours / WEEK_HOURS, unit: "WEEKS" };
-  if (hours % DAY_HOURS === 0) return { value: hours / DAY_HOURS, unit: "DAYS" };
-  return { value: hours, unit: "HOURS" };
-}
+// -------------------------------------------------------------------------- filas
 
 /**
- * Fila lista para la UI: el estado y el vencimiento se calculan una sola vez en el servidor
- * y bajan ya resueltos, así el cliente no recalcula contra un reloj distinto.
+ * Fila lista para la UI: el estado y el vencimiento se calculan una sola vez en el
+ * servidor y bajan ya resueltos, así el cliente no recalcula contra un reloj distinto.
  */
-export type MaintenanceRow = Schedule & {
+export type MaintenanceRow = Recurrence & {
   id: string;
   title: string;
   description: string | null;
@@ -281,7 +412,7 @@ export type MaintenanceRow = Schedule & {
 };
 
 export function toMaintenanceRow(
-  task: Schedule & {
+  task: Recurrence & {
     id: string;
     title: string;
     description: string | null;
@@ -293,7 +424,7 @@ export function toMaintenanceRow(
   return {
     ...task,
     nextDueAt: getNextDueAt(task),
-    status: getMaintenanceStatus(task),
+    status: getMaintenanceStatus(task, completionCount),
     completionCount,
   };
 }

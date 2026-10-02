@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
-import { nominalIntervalHours, type ScheduleType } from "@/lib/maintenance";
+import type { RecurrenceInput } from "@/lib/maintenance";
 import {
   completeMaintenanceTaskSchema,
   createMaintenanceTaskSchema,
@@ -15,25 +15,32 @@ export type ActionResult = { error?: string };
 export type MaintenanceTaskInput = {
   title: string;
   description?: string;
-  scheduleType: ScheduleType;
-  intervalHours: number;
-  timeOfDay?: number | null;
-  weekday?: number | null;
-  monthDay?: number | null;
-  nthWeek?: number | null;
-};
+} & RecurrenceInput;
 
-/** Normaliza la agenda: deja en null los campos que no aplican al tipo elegido. */
-function toScheduleData(data: MaintenanceTaskInput) {
-  const type = data.scheduleType;
-  const isCalendar = type !== "INTERVAL";
+/** Normaliza la regla: deja en null los campos que no aplican a la frecuencia elegida. */
+function toRecurrenceData(data: RecurrenceInput) {
+  const isMonthly = data.freq === "MONTH";
+  const monthlyMode = isMonthly ? data.monthlyMode ?? "DAY_OF_MONTH" : null;
+  const byNthWeekday = monthlyMode === "NTH_WEEKDAY";
+
   return {
-    scheduleType: type,
-    intervalHours: nominalIntervalHours(type, data.intervalHours),
-    timeOfDay: isCalendar ? data.timeOfDay ?? 0 : null,
-    weekday: type === "WEEKLY" || type === "MONTHLY_NTH_WEEKDAY" ? data.weekday ?? 1 : null,
-    monthDay: type === "MONTHLY_DAY" ? data.monthDay ?? 1 : null,
-    nthWeek: type === "MONTHLY_NTH_WEEKDAY" ? data.nthWeek ?? 1 : null,
+    freq: data.freq,
+    interval: Math.max(1, data.interval),
+    timeOfDay: data.freq === "HOUR" ? null : data.timeOfDay ?? 0,
+    weekdays:
+      data.freq === "WEEK"
+        ? [...new Set(data.weekdays)].sort((a, b) => a - b)
+        : byNthWeekday
+          ? [data.weekdays[0] ?? 1]
+          : [],
+    monthlyMode,
+    monthDay:
+      (isMonthly && !byNthWeekday) || data.freq === "YEAR" ? data.monthDay ?? 1 : null,
+    nthWeek: byNthWeekday ? data.nthWeek ?? 1 : null,
+    monthOfYear: data.freq === "YEAR" ? data.monthOfYear ?? 0 : null,
+    endType: data.endType,
+    endDate: data.endType === "ON_DATE" ? data.endDate : null,
+    endCount: data.endType === "AFTER_COUNT" ? data.endCount : null,
   };
 }
 
@@ -55,7 +62,7 @@ export async function createMaintenanceTask(input: MaintenanceTaskInput): Promis
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
-      ...toScheduleData(parsed.data),
+      ...toRecurrenceData(parsed.data),
     },
   });
 
@@ -79,7 +86,7 @@ export async function updateMaintenanceTask(
     data: {
       title: parsed.data.title,
       description: parsed.data.description || null,
-      ...toScheduleData(parsed.data),
+      ...toRecurrenceData(parsed.data),
     },
   });
 

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { updateMaintenanceTask } from "@/lib/actions/maintenance";
-import type { Schedule } from "@/lib/maintenance";
-import { ScheduleFields } from "./ScheduleFields";
+import type { Recurrence } from "@/lib/maintenance";
+import { RecurrenceFields } from "./RecurrenceFields";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-type EditableTask = Schedule & {
+type EditableTask = Recurrence & {
   id: string;
   title: string;
   description: string | null;
@@ -32,7 +32,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
-  const [schedule, setSchedule] = useState<Schedule>(task);
+  const [recurrence, setRecurrence] = useState<Recurrence>(task);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -60,7 +60,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
             <Label>Descripción (opcional)</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <ScheduleFields initial={task} onChange={setSchedule} />
+          <RecurrenceFields initial={task} onChange={setRecurrence} />
         </div>
 
         <DialogFooter>
@@ -78,7 +78,7 @@ export function EditMaintenanceTaskDialog({ task }: { task: EditableTask }) {
                 const result = await updateMaintenanceTask(task.id, {
                   title,
                   description: description || undefined,
-                  ...schedule,
+                  ...recurrence,
                 });
                 if (result.error) {
                   toast.error(result.error);

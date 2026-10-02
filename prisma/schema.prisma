@@ -75,42 +75,60 @@ model TicketStatusHistory {
   @@index([ticketId])
 }
 
-enum MaintenanceScheduleType {
-  INTERVAL
-  DAILY
-  WEEKLY
-  MONTHLY_DAY
-  MONTHLY_NTH_WEEKDAY
+enum MaintenanceFreq {
+  HOUR
+  DAY
+  WEEK
+  MONTH
+  YEAR
 }
 
+enum MaintenanceMonthlyMode {
+  DAY_OF_MONTH
+  NTH_WEEKDAY
+}
+
+enum MaintenanceEndType {
+  NEVER
+  ON_DATE
+  AFTER_COUNT
+}
+
+/// Regla de repeticion al estilo calendario: se repite cada `interval` `freq`.
+/// Las ocurrencias se generan desde `createdAt` y el proximo vencimiento es la
+/// primera posterior a la ultima vez que se hizo. Nada de esto se persiste.
 model MaintenanceTask {
-  id           String                  @id @default(cuid())
-  title        String
-  description  String?
-  scheduleType MaintenanceScheduleType @default(INTERVAL)
+  id          String          @id @default(cuid())
+  title       String
+  description String?
 
-  /// Período nominal en horas. Para INTERVAL es la frecuencia real; para los demás
-  /// tipos es el período aproximado (24 / 168 / 720) y solo se usa para decidir
-  /// con cuánta anticipación una tarea pasa a "vence pronto".
-  intervalHours Int
+  freq     MaintenanceFreq @default(DAY)
+  interval Int             @default(1)
 
-  /// Minutos desde la medianoche, en hora de la clínica. Solo para los tipos de calendario.
+  /// Minutos desde la medianoche, hora de la clinica. Null solo cuando freq = HOUR.
   timeOfDay Int?
-  /// 0 = domingo .. 6 = sábado. Para WEEKLY y MONTHLY_NTH_WEEKDAY.
-  weekday   Int?
-  /// 1..31, se recorta al último día del mes cuando no existe. Para MONTHLY_DAY.
-  monthDay  Int?
-  /// 1..4, o 5 = "el último". Para MONTHLY_NTH_WEEKDAY.
-  nthWeek   Int?
+  /// Dias de la semana elegidos (0 = domingo .. 6 = sabado). Para freq = WEEK.
+  weekdays  Int[]           @default([])
 
-  active          Boolean   @default(true)
+  /// Para freq = MONTH: por numero de dia, o por "el N-esimo <dia> del mes".
+  monthlyMode MaintenanceMonthlyMode?
+  /// Dia del mes (1..31, se recorta al ultimo dia). Para MONTH/DAY_OF_MONTH y YEAR.
+  monthDay    Int?
+  /// 1..4, o 5 = "el ultimo". Para MONTH/NTH_WEEKDAY (el dia sale de weekdays[0]).
+  nthWeek     Int?
+  /// Mes del anio (0 = enero .. 11 = diciembre). Para freq = YEAR.
+  monthOfYear Int?
+
+  endType  MaintenanceEndType @default(NEVER)
+  endDate  DateTime?
+  /// Cantidad de veces que hay que hacerla antes de darla por terminada.
+  endCount Int?
+
   lastCompletedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   completions MaintenanceCompletion[]
-
-  @@index([active])
 }
 
 model MaintenanceCompletion {

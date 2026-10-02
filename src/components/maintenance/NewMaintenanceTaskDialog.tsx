@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createMaintenanceTask } from "@/lib/actions/maintenance";
-import type { Schedule } from "@/lib/maintenance";
-import { DEFAULT_SCHEDULE, ScheduleFields } from "./ScheduleFields";
+import type { Recurrence } from "@/lib/maintenance";
+import { DEFAULT_RECURRENCE, RecurrenceFields } from "./RecurrenceFields";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +26,13 @@ export function NewMaintenanceTaskDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [schedule, setSchedule] = useState<Schedule>(DEFAULT_SCHEDULE);
+  const [recurrence, setRecurrence] = useState<Recurrence>(DEFAULT_RECURRENCE);
   const [isPending, startTransition] = useTransition();
 
   function reset() {
     setTitle("");
     setDescription("");
-    setSchedule(DEFAULT_SCHEDULE);
+    setRecurrence(DEFAULT_RECURRENCE);
   }
 
   return (
@@ -73,7 +73,7 @@ export function NewMaintenanceTaskDialog() {
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           {/* La key fuerza el remonte al reabrir, para que el formulario arranque limpio. */}
-          <ScheduleFields key={open ? "open" : "closed"} onChange={setSchedule} />
+          <RecurrenceFields key={open ? "open" : "closed"} onChange={setRecurrence} />
         </div>
 
         <DialogFooter>
@@ -91,7 +91,7 @@ export function NewMaintenanceTaskDialog() {
                 const result = await createMaintenanceTask({
                   title,
                   description: description || undefined,
-                  ...schedule,
+                  ...recurrence,
                 });
                 if (result.error) {
                   toast.error(result.error);

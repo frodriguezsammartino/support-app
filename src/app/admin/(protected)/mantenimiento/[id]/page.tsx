@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
-import { describeSchedule, MAINTENANCE_STATUS_META, toMaintenanceRow } from "@/lib/maintenance";
+import { describeRecurrence, MAINTENANCE_STATUS_META, toMaintenanceRow } from "@/lib/maintenance";
 import { MaintenanceStatusBadge } from "@/components/maintenance/MaintenanceStatusBadge";
 import { CompleteMaintenanceDialog } from "@/components/maintenance/CompleteMaintenanceDialog";
 import { EditMaintenanceTaskDialog } from "@/components/maintenance/EditMaintenanceTaskDialog";
@@ -54,8 +54,8 @@ export default async function MaintenanceTaskDetailPage(
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Cuándo se repite</p>
-              <p className="text-sm font-medium">{describeSchedule(task)}</p>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Se repite</p>
+              <p className="text-sm font-medium">{describeRecurrence(task)}</p>
             </div>
             <div className="rounded-lg border bg-zinc-50/60 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Última vez</p>
@@ -89,7 +89,7 @@ export default async function MaintenanceTaskDetailPage(
             <CompleteMaintenanceDialog
               taskId={task.id}
               taskTitle={task.title}
-              done={row.status === "OK"}
+              done={row.status === "OK" || row.status === "FINISHED"}
             />
             <EditMaintenanceTaskDialog task={task} />
           </div>

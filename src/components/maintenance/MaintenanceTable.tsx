@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteMaintenanceTask } from "@/lib/actions/maintenance";
-import { describeSchedule, MAINTENANCE_STATUS_META, type MaintenanceRow } from "@/lib/maintenance";
+import { describeRecurrence, MAINTENANCE_STATUS_META, type MaintenanceRow } from "@/lib/maintenance";
 import { MaintenanceStatusBadge } from "./MaintenanceStatusBadge";
 import { CompleteMaintenanceDialog } from "./CompleteMaintenanceDialog";
 import {
@@ -55,7 +55,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
             <TableRow>
               <TableHead className="w-36">Estado</TableHead>
               <TableHead>Tarea</TableHead>
-              <TableHead className="w-56">Cuándo se repite</TableHead>
+              <TableHead className="w-64">Se repite</TableHead>
               <TableHead className="w-48">Última vez</TableHead>
               <TableHead className="w-48">Próxima</TableHead>
               <TableHead className="w-48" />
@@ -90,7 +90,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                     )}
                   </TableCell>
 
-                  <TableCell className="text-zinc-600">{describeSchedule(task)}</TableCell>
+                  <TableCell className="text-zinc-600">{describeRecurrence(task)}</TableCell>
 
                   <TableCell>
                     {task.lastCompletedAt ? (
@@ -120,7 +120,7 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                       <CompleteMaintenanceDialog
                         taskId={task.id}
                         taskTitle={task.title}
-                        done={task.status === "OK"}
+                        done={task.status === "OK" || task.status === "FINISHED"}
                       />
                       <Button
                         type="button"
