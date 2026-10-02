@@ -33,8 +33,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+      <div className="flex flex-wrap items-end justify-end gap-3">
         <DashboardFilters categories={categories} />
       </div>
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { BarChart3, Home, LogOut, Menu, Wrench } from "lucide-react";
 import { adminLogout } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** Ordenado de más específico a más general: gana el primer prefijo que matchea. */
+const SECTIONS: { prefix: string; label: string }[] = [
+  { prefix: "/admin/mantenimiento", label: "Mantenimiento" },
+  { prefix: "/admin/dashboard", label: "Dashboard" },
+  { prefix: "/admin/tickets", label: "Ticket" },
+  { prefix: "/admin", label: "Inicio" },
+];
+
+function sectionLabel(pathname: string) {
+  const match = SECTIONS.find(
+    ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+  return match?.label ?? "Inicio";
+}
+
 export function AdminHeader() {
+  const pathname = usePathname();
+
   return (
-    <header className="border-b bg-white">
+    <header className="bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <Image src="/logo.webp" alt="Logo" width={200} height={100} className="h-14 w-auto object-contain" />
-          <span className="hidden self-center text-sm font-medium text-zinc-600 sm:inline">Panel técnico</span>
         </div>
 
         <DropdownMenu>
@@ -50,6 +67,15 @@ export function AdminHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      <div className="bg-[#184f95]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white">
+            Panel técnico
+          </span>
+          <h1 className="text-sm font-medium text-blue-100">{sectionLabel(pathname)}</h1>
+        </div>
       </div>
     </header>
   );

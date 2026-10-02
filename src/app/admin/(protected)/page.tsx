@@ -23,14 +23,14 @@ export default async function HomePage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Pendientes</h1>
+          <h2 className="text-xl font-semibold">Pendientes</h2>
           <NewInternalTicketDialog categories={categories} />
         </div>
         <PendientesTable tickets={pendientes} categories={categories} />
       </div>
 
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Historial de tickets cerrados</h1>
+        <h2 className="text-xl font-semibold">Historial de tickets cerrados</h2>
         <HistorialTable tickets={historial} categories={categories} />
       </div>
     </div>
