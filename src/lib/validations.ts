@@ -24,6 +24,12 @@ export const adminLoginSchema = z.object({
 
 export const createInternalTicketSchema = z.object({
   assetId: z.string().optional(),
+  // Permite cargar algo que pasó antes, pero no fechar un ticket en el futuro.
+  createdAt: z.coerce
+    .date()
+    .max(new Date(Date.now() + 60_000), "La fecha no puede ser futura")
+    .nullable()
+    .optional(),
   title: z.string().trim().min(3, "El título tiene que tener al menos 3 letras").max(150),
   description: z.string().trim().optional(),
   categoryId: z.string().min(1, "Elegí una categoría"),
@@ -69,6 +75,15 @@ export const completeMaintenanceTaskSchema = z.object({
   note: z.string().trim().optional(),
 });
 
+export const maintenanceNoteSchema = z.object({
+  note: z.string().trim().min(2, "La nota no puede estar vacía").max(4000),
+  at: z.coerce
+    .date()
+    .max(new Date(Date.now() + 60_000), "La fecha no puede ser futura")
+    .nullable()
+    .optional(),
+});
+
 const optionalText = (max: number) =>
   z
     .string()
@@ -103,6 +118,7 @@ export const createLicenseSchema = z.object({
   currency: z.enum(["ARS", "USD"]),
   billing: z.enum(["MONTHLY", "YEARLY", "ONE_TIME"]),
   expiresAt: z.coerce.date().nullable().optional(),
+  autoRenew: z.coerce.boolean(),
   status: z.enum(["ACTIVE", "CANCELLED"]),
   notes: optionalText(4000),
 });

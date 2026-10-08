@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2, MessageSquare } from "lucide-react";
 import { db } from "@/lib/db";
 import { describeRecurrence, MAINTENANCE_STATUS_META, toMaintenanceRow } from "@/lib/maintenance";
 import { MaintenanceStatusBadge } from "@/components/maintenance/MaintenanceStatusBadge";
 import { CompleteMaintenanceDialog } from "@/components/maintenance/CompleteMaintenanceDialog";
+import { MaintenanceNoteForm } from "@/components/maintenance/MaintenanceNoteForm";
 import { EditMaintenanceTaskDialog } from "@/components/maintenance/EditMaintenanceTaskDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -27,7 +28,7 @@ export default async function MaintenanceTaskDetailPage(
     include: {
       completions: { orderBy: { completedAt: "desc" } },
       asset: { select: { id: true, code: true, name: true } },
-      _count: { select: { completions: true } },
+      _count: { select: { completions: { where: { kind: "DONE" } } } },
     },
   });
 
@@ -106,41 +107,62 @@ export default async function MaintenanceTaskDetailPage(
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Historial de mantenimientos
+            Historial
             <span className="ml-2 text-sm font-normal text-zinc-500">
               {task.completions.length} registro{task.completions.length === 1 ? "" : "s"}
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-0">
+        <CardContent className="flex flex-col gap-4">
+          <MaintenanceNoteForm taskId={task.id} />
+
           {task.completions.length === 0 && (
             <p className="text-sm text-zinc-500">
-              Todavía no se registró ninguna vez que se haya hecho esta tarea.
+              Todavía no hay nada registrado para esta tarea.
             </p>
           )}
 
-          {task.completions.map((completion, index) => (
-            <div key={completion.id} className="flex gap-3">
-              {/* Línea de tiempo: punto + hilo vertical, salvo en el último registro. */}
-              <div className="flex flex-col items-center">
-                <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-blue-600" />
-                {index < task.completions.length - 1 && (
-                  <span className="w-px flex-1 bg-zinc-200" />
-                )}
-              </div>
-              <div className={index < task.completions.length - 1 ? "pb-5" : ""}>
-                <p className="text-sm font-medium leading-tight">
-                  {format(completion.completedAt, "dd/MM/yyyy HH:mm")}
-                  <span className="ml-2 text-xs font-normal text-zinc-400">
-                    hace {formatDistanceToNow(completion.completedAt, { locale: es })}
+          <div className="flex flex-col gap-0">
+
+          {task.completions.map((entry, index) => {
+            const isDone = entry.kind === "DONE";
+            return (
+              <div key={entry.id} className="flex gap-3">
+                {/* Línea de tiempo: ícono + hilo vertical, salvo en el último registro. */}
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ${
+                      isDone ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                    }`}
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="size-3.5" />
+                    ) : (
+                      <MessageSquare className="size-3.5" />
+                    )}
                   </span>
-                </p>
-                <p className="mt-0.5 whitespace-pre-wrap text-sm text-zinc-600">
-                  {completion.note || <span className="text-zinc-400">Sin nota.</span>}
-                </p>
+                  {index < task.completions.length - 1 && (
+                    <span className="w-px flex-1 bg-zinc-200" />
+                  )}
+                </div>
+                <div className={index < task.completions.length - 1 ? "pb-5" : ""}>
+                  <p className="text-sm font-medium leading-tight">
+                    {isDone ? "Se hizo" : "Observación"}
+                    <span className="ml-2 font-normal text-zinc-500">
+                      {format(entry.completedAt, "dd/MM/yyyy HH:mm")}
+                    </span>
+                    <span className="ml-2 text-xs font-normal text-zinc-400">
+                      hace {formatDistanceToNow(entry.completedAt, { locale: es })}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-zinc-600">
+                    {entry.note || <span className="text-zinc-400">Sin nota.</span>}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          </div>
         </CardContent>
       </Card>
     </div>

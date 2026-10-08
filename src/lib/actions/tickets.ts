@@ -247,6 +247,7 @@ export async function createInternalTicket(input: {
   priority: TicketPriority;
   reporterName?: string;
   assetId?: string;
+  createdAt?: Date | null;
 }): Promise<ActionResult> {
   await requireAdmin();
 
@@ -255,8 +256,12 @@ export async function createInternalTicket(input: {
     return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
   }
 
+  // Permite fechar el ticket cuando realmente pasó, no cuando el técnico se acordó.
+  const createdAt = parsed.data.createdAt ?? new Date();
+
   await db.ticket.create({
     data: {
+      createdAt,
       reporterName: parsed.data.reporterName?.trim() || "Técnico",
       reporterEmail: null,
       title: parsed.data.title,
@@ -264,11 +269,12 @@ export async function createInternalTicket(input: {
       categoryId: parsed.data.categoryId,
       priority: parsed.data.priority,
       assetId: parsed.data.assetId || null,
-      statusHistory: { create: { toStatus: "BACKLOG" } },
+      statusHistory: { create: { toStatus: "BACKLOG", changedAt: createdAt } },
     },
   });
 
   revalidatePath("/admin");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/equipos");
   return {};
 }

@@ -7,6 +7,7 @@ import type { RecurrenceInput } from "@/lib/maintenance";
 import {
   completeMaintenanceTaskSchema,
   createMaintenanceTaskSchema,
+  maintenanceNoteSchema,
   updateMaintenanceTaskSchema,
 } from "@/lib/validations";
 
@@ -111,9 +112,52 @@ export async function completeMaintenanceTask(taskId: string, note?: string): Pr
     where: { id: taskId },
     data: {
       lastCompletedAt: now,
-      completions: { create: { note: parsed.data.note || null, completedAt: now } },
+      completions: {
+        create: { kind: "DONE", note: parsed.data.note || null, completedAt: now },
+      },
     },
   });
+
+  revalidateMaintenance(taskId);
+  return {};
+}
+
+/**
+ * Una observación suelta en el log: no cuenta como que la tarea se hizo, así que
+ * no mueve lastCompletedAt ni el próximo vencimiento.
+ */
+export async function addMaintenanceNote(
+  taskId: string,
+  note: string,
+  at?: Date | null
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  const parsed = maintenanceNoteSchema.safeParse({ note, at });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Revisá la nota." };
+  }
+
+  await db.maintenanceCompletion.create({
+    data: {
+      taskId,
+      kind: "NOTE",
+      note: parsed.data.note,
+      completedAt: parsed.data.at ?? new Date(),
+    },
+  });
+
+  revalidateMaintenance(taskId);
+  return {};
+}
+
+export async function deleteMaintenanceLogEntry(
+  entryId: string,
+  taskId: string
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  await db.maintenanceCompletion.delete({ where: { id: entryId } });
 
   revalidateMaintenance(taskId);
   return {};

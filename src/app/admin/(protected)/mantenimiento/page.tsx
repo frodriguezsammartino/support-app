@@ -8,7 +8,7 @@ export default async function MantenimientoPage() {
   const [tasks, assets] = await Promise.all([
     db.maintenanceTask.findMany({
       include: {
-        _count: { select: { completions: true } },
+        _count: { select: { completions: { where: { kind: "DONE" } } } },
         asset: { select: { id: true, code: true, name: true } },
       },
     }),

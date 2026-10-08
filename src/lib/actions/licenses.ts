@@ -17,6 +17,7 @@ export type LicenseInput = {
   currency: string;
   billing: LicenseBilling;
   expiresAt?: Date | null;
+  autoRenew: boolean;
   status: LicenseStatus;
   notes?: string | null;
 };
@@ -36,6 +37,7 @@ function toLicenseData(data: LicenseInput) {
     currency: data.currency,
     billing: data.billing,
     expiresAt: data.expiresAt ?? null,
+    autoRenew: data.autoRenew,
     status: data.status,
     notes: data.notes || null,
   };

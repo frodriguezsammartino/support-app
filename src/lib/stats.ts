@@ -130,15 +130,19 @@ export async function getOldestOpenTicketAgeHours(filters: StatsFilters = {}) {
 
 /** Los mantenimientos no se filtran por categoría: no tienen. Solo por período. */
 export async function getMaintenanceCompletionCount(filters: StatsFilters = {}) {
+  // Solo lo que efectivamente se hizo: las observaciones sueltas no cuentan.
   return db.maintenanceCompletion.count({
-    where: filters.from ? { completedAt: { gte: filters.from } } : undefined,
+    where: {
+      kind: "DONE",
+      ...(filters.from ? { completedAt: { gte: filters.from } } : {}),
+    },
   });
 }
 
 export async function getMaintenanceWeeklyTrend(filters: StatsFilters = {}) {
   const where = filters.from
-    ? Prisma.sql`WHERE "completedAt" >= ${filters.from}`
-    : Prisma.empty;
+    ? Prisma.sql`WHERE kind = 'DONE' AND "completedAt" >= ${filters.from}`
+    : Prisma.sql`WHERE kind = 'DONE'`;
 
   const rows = await db.$queryRaw<{ week: Date; count: bigint }[]>`
     SELECT date_trunc('week', "completedAt") AS week, COUNT(*)::bigint AS count

@@ -10,6 +10,7 @@ import {
   type LicenseBilling,
   type LicenseStatus,
 } from "@/lib/licenses";
+import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +31,7 @@ export type LicenseFormValues = {
   currency: Currency;
   billing: LicenseBilling;
   expiresAt: string;
+  autoRenew: boolean;
   status: LicenseStatus;
   notes: string;
 };
@@ -43,6 +45,7 @@ export const EMPTY_LICENSE_FORM: LicenseFormValues = {
   currency: "ARS",
   billing: "YEARLY",
   expiresAt: "",
+  autoRenew: false,
   status: "ACTIVE",
   notes: "",
 };
@@ -196,15 +199,43 @@ export function LicenseFormFields({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label>Vence el (opcional)</Label>
-        <Input
-          type="date"
-          className="w-44"
-          value={values.expiresAt}
-          onChange={(e) => onChange({ expiresAt: e.target.value })}
-        />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-2">
+          <Label>{values.autoRenew ? "Próxima renovación" : "Vence el"} (opcional)</Label>
+          <Input
+            type="date"
+            className="w-44"
+            value={values.expiresAt}
+            onChange={(e) => onChange({ expiresAt: e.target.value })}
+          />
+        </div>
+
+        <button
+          type="button"
+          aria-pressed={values.autoRenew}
+          onClick={() => onChange({ autoRenew: !values.autoRenew })}
+          className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
+            values.autoRenew
+              ? "border-[#184f95] bg-[#eaf2fc] text-[#184f95]"
+              : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
+          }`}
+        >
+          <span
+            className={`flex size-4 items-center justify-center rounded border ${
+              values.autoRenew ? "border-[#184f95] bg-[#184f95] text-white" : "border-zinc-300"
+            }`}
+          >
+            {values.autoRenew && <Check className="size-3" />}
+          </span>
+          Se renueva sola
+        </button>
       </div>
+
+      <p className="-mt-1 text-xs text-zinc-500">
+        {values.autoRenew
+          ? "Se cobra sola, no hay que hacer nada al vencer. Igual se usa la fecha para saber cuándo cae la factura."
+          : "Hay que renovarla a mano: va a aparecer como vencida o por vencer."}
+      </p>
 
       <div className="flex flex-col gap-2">
         <Label>Notas (opcional)</Label>

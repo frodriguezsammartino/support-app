@@ -139,14 +139,22 @@ model MaintenanceTask {
   @@index([assetId])
 }
 
+/// El log de una tarea periodica. DONE = se hizo (mueve lastCompletedAt);
+/// NOTE = una observacion suelta que no cuenta como realizacion.
 model MaintenanceCompletion {
-  id          String          @id @default(cuid())
+  id          String             @id @default(cuid())
   taskId      String
-  task        MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task        MaintenanceTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind        MaintenanceLogKind @default(DONE)
   note        String?
-  completedAt DateTime        @default(now())
+  completedAt DateTime           @default(now())
 
   @@index([taskId])
+}
+
+enum MaintenanceLogKind {
+  DONE
+  NOTE
 }
 
 enum AssetType {
@@ -218,7 +226,11 @@ model License {
   currency  String         @default("ARS")
   billing   LicenseBilling @default(YEARLY)
 
+  /// Proximo vencimiento o fecha de cobro. Con autoRenew se usa como ancla
+  /// para proyectar los pagos siguientes.
   expiresAt DateTime?
+  /// Se renueva y cobra sola: no hay que hacer nada al vencer.
+  autoRenew Boolean       @default(false)
   status    LicenseStatus @default(ACTIVE)
   notes     String?
 

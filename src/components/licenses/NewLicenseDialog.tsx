@@ -79,6 +79,7 @@ export function NewLicenseDialog() {
                   currency: values.currency,
                   billing: values.billing,
                   expiresAt: fromDateInput(values.expiresAt),
+                  autoRenew: values.autoRenew,
                   status: values.status,
                   notes: values.notes,
                 });

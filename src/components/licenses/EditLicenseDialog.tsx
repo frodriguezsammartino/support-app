@@ -39,6 +39,7 @@ export type EditableLicense = {
   currency: string;
   billing: LicenseBilling;
   expiresAt: Date | null;
+  autoRenew: boolean;
   status: LicenseStatus;
   notes: string | null;
 };
@@ -53,6 +54,7 @@ function toFormValues(license: EditableLicense): LicenseFormValues {
     currency: (license.currency === "USD" ? "USD" : "ARS") as Currency,
     billing: license.billing,
     expiresAt: toDateInput(license.expiresAt),
+    autoRenew: license.autoRenew,
     status: license.status,
     notes: license.notes ?? "",
   };
@@ -111,6 +113,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
                   currency: values.currency,
                   billing: values.billing,
                   expiresAt: fromDateInput(values.expiresAt),
+                  autoRenew: values.autoRenew,
                   status: values.status,
                   notes: values.notes,
                 });

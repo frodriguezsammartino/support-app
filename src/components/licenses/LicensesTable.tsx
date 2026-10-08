@@ -3,16 +3,16 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adjustAssignedSeats, deleteLicense } from "@/lib/actions/licenses";
 import {
+  ALERT_META,
   BILLING_LABELS,
-  EXPIRY_META,
   LICENSE_STATUS_META,
   LICENSE_STATUS_ORDER,
   formatMoney,
-  getExpiryState,
+  getLicenseAlert,
   type LicenseBilling,
   type LicenseStatus,
 } from "@/lib/licenses";
@@ -108,7 +108,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                 <TableHead>Licencia</TableHead>
                 <TableHead className="w-56">Puestos</TableHead>
                 <TableHead className="w-44">Costo</TableHead>
-                <TableHead className="w-40">Vence</TableHead>
+                <TableHead className="w-48">Vence / se renueva</TableHead>
                 <TableHead className="w-32">Estado</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
@@ -126,8 +126,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
               {visible.map((license) => {
                 const statusMeta = LICENSE_STATUS_META[license.status];
-                const expiry = getExpiryState(license.expiresAt);
-                const expiryMeta = EXPIRY_META[expiry];
+                const alertMeta = ALERT_META[getLicenseAlert(license)];
                 const available = license.seatsTotal - license.seatsAssigned;
                 return (
                   <TableRow key={license.id} className={statusMeta.rowClass}>
@@ -194,7 +193,10 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
                     <TableCell>
                       <div className="flex flex-col leading-tight">
-                        <span className={expiryMeta.className}>{expiryMeta.label}</span>
+                        <span className={`flex items-center gap-1.5 ${alertMeta.className}`}>
+                          {license.autoRenew && <RefreshCw className="size-3.5" />}
+                          {alertMeta.label}
+                        </span>
                         {license.expiresAt && (
                           <span className="text-xs text-zinc-400">
                             {format(license.expiresAt, "dd/MM/yyyy")}

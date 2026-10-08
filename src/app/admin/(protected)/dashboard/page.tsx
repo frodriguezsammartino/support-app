@@ -14,7 +14,7 @@ import {
 } from "@/lib/stats";
 import { db } from "@/lib/db";
 import { getMaintenanceStatus } from "@/lib/maintenance";
-import { getExpiryState } from "@/lib/licenses";
+import { getLicenseAlert } from "@/lib/licenses";
 import { KpiCard } from "@/components/charts/KpiCard";
 import { TicketsByCategoryChart } from "@/components/charts/TicketsByCategoryChart";
 import { TicketsByAssetChart } from "@/components/charts/TicketsByAssetChart";
@@ -64,18 +64,22 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
     getMaintenanceWeeklyTrend(filters),
     getMaintenanceCompletionCount(filters),
     getOldestOpenTicketAgeHours(filters),
-    db.maintenanceTask.findMany({ include: { _count: { select: { completions: true } } } }),
+    db.maintenanceTask.findMany({ include: { _count: { select: { completions: { where: { kind: "DONE" } } } } } }),
     db.asset.count(),
-    db.license.findMany({ where: { status: "ACTIVE" }, select: { expiresAt: true } }),
+    db.license.findMany({
+      where: { status: "ACTIVE" },
+      select: { expiresAt: true, autoRenew: true, status: true, billing: true },
+    }),
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
   const maintenanceOverdue = maintenanceTasks.filter(
     (t) => getMaintenanceStatus(t, t._count.completions) === "OVERDUE"
   ).length;
+  // Las de renovación automática no piden acción, así que no suman acá.
   const licensesExpiring = licenses.filter((l) => {
-    const state = getExpiryState(l.expiresAt);
-    return state === "EXPIRING" || state === "EXPIRED";
+    const alert = getLicenseAlert(l);
+    return alert === "EXPIRING" || alert === "EXPIRED";
   }).length;
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;
 
