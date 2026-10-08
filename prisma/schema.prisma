@@ -190,3 +190,40 @@ model Asset {
   @@index([status])
   @@index([type])
 }
+
+enum LicenseBilling {
+  MONTHLY
+  YEARLY
+  ONE_TIME
+}
+
+enum LicenseStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Una licencia de software contratada: Office, antivirus, el dominio, etc.
+/// `seats` son los puestos: cuantos se pagan y cuantos estan asignados.
+model License {
+  id     String @id @default(cuid())
+  code   Int    @unique @default(autoincrement())
+  name   String
+  vendor String?
+
+  seatsTotal    Int @default(1)
+  seatsAssigned Int @default(0)
+
+  /// En centavos, para no arrastrar errores de redondeo con los decimales.
+  costCents Int?
+  currency  String         @default("ARS")
+  billing   LicenseBilling @default(YEARLY)
+
+  expiresAt DateTime?
+  status    LicenseStatus @default(ACTIVE)
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}

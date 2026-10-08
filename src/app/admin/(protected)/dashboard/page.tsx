@@ -14,6 +14,7 @@ import {
 } from "@/lib/stats";
 import { db } from "@/lib/db";
 import { getMaintenanceStatus } from "@/lib/maintenance";
+import { getExpiryState } from "@/lib/licenses";
 import { KpiCard } from "@/components/charts/KpiCard";
 import { TicketsByCategoryChart } from "@/components/charts/TicketsByCategoryChart";
 import { TicketsByAssetChart } from "@/components/charts/TicketsByAssetChart";
@@ -50,6 +51,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
     oldestOpenHours,
     maintenanceTasks,
     assetCount,
+    licenses,
     categories,
   ] = await Promise.all([
     getKpis(filters),
@@ -64,12 +66,17 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
     getOldestOpenTicketAgeHours(filters),
     db.maintenanceTask.findMany({ include: { _count: { select: { completions: true } } } }),
     db.asset.count(),
+    db.license.findMany({ where: { status: "ACTIVE" }, select: { expiresAt: true } }),
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
   const maintenanceOverdue = maintenanceTasks.filter(
     (t) => getMaintenanceStatus(t, t._count.completions) === "OVERDUE"
   ).length;
+  const licensesExpiring = licenses.filter((l) => {
+    const state = getExpiryState(l.expiresAt);
+    return state === "EXPIRING" || state === "EXPIRED";
+  }).length;
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;
 
   return (
@@ -100,7 +107,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
       </div>
 
       <h2 className="mt-2 text-sm font-medium uppercase tracking-wide text-zinc-500">
-        Mantenimiento y equipos
+        Mantenimiento e inventario
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -108,6 +115,11 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
         <KpiCard label="Mantenimientos realizados" value={String(maintenanceDone)} />
         <KpiCard label="Tareas vencidas ahora" value={String(maintenanceOverdue)} />
         <KpiCard label="Equipos en el inventario" value={String(assetCount)} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Licencias activas" value={String(licenses.length)} />
+        <KpiCard label="Licencias por vencer" value={String(licensesExpiring)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createTicketSchema = z.object({
   reporterName: z.string().trim().min(2, "Ingresá tu nombre completo").max(120),
   reporterEmail: z.string().trim().email("Ingresá un email válido"),
-  title: z.string().trim().min(5, "Contá brevemente el problema").max(150),
+  title: z.string().trim().min(3, "El problema tiene que tener al menos 3 letras").max(150),
   description: z.string().trim().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
 });
@@ -15,7 +15,7 @@ export const addCommentSchema = z.object({
 
 export const completeTicketSchema = z.object({
   ticketId: z.string().min(1),
-  resolutionNote: z.string().trim().min(5, "Contá brevemente qué se hizo").max(4000),
+  resolutionNote: z.string().trim().min(3, "Contá en pocas palabras qué se hizo").max(4000),
 });
 
 export const adminLoginSchema = z.object({
@@ -24,7 +24,7 @@ export const adminLoginSchema = z.object({
 
 export const createInternalTicketSchema = z.object({
   assetId: z.string().optional(),
-  title: z.string().trim().min(5, "Contá brevemente la tarea").max(150),
+  title: z.string().trim().min(3, "El título tiene que tener al menos 3 letras").max(150),
   description: z.string().trim().optional(),
   categoryId: z.string().min(1, "Elegí una categoría"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
@@ -33,7 +33,7 @@ export const createInternalTicketSchema = z.object({
 
 export const createMaintenanceTaskSchema = z
   .object({
-    title: z.string().trim().min(3, "Contá brevemente la tarea").max(150),
+    title: z.string().trim().min(3, "El título tiene que tener al menos 3 letras").max(150),
     description: z.string().trim().optional(),
     assetId: z.string().optional(),
     freq: z.enum(["HOUR", "DAY", "WEEK", "MONTH", "YEAR"]),
@@ -92,3 +92,19 @@ export const createAssetSchema = z.object({
 });
 
 export const updateAssetSchema = createAssetSchema;
+
+export const createLicenseSchema = z.object({
+  name: z.string().trim().min(2, "Ponele un nombre a la licencia").max(120),
+  vendor: optionalText(80),
+  seatsTotal: z.coerce.number().int().min(1, "Tiene que haber al menos 1 puesto").max(10000),
+  // Se permite asignar mas puestos de los comprados: justamente eso hay que poder verlo.
+  seatsAssigned: z.coerce.number().int().min(0, "No puede ser negativo").max(10000),
+  costCents: z.coerce.number().int().min(0).nullable().optional(),
+  currency: z.enum(["ARS", "USD"]),
+  billing: z.enum(["MONTHLY", "YEARLY", "ONE_TIME"]),
+  expiresAt: z.coerce.date().nullable().optional(),
+  status: z.enum(["ACTIVE", "CANCELLED"]),
+  notes: optionalText(4000),
+});
+
+export const updateLicenseSchema = createLicenseSchema;
