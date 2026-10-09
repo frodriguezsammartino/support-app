@@ -16,6 +16,7 @@ export type AssetInput = {
   model?: string | null;
   serialNumber?: string | null;
   location?: string | null;
+  owner?: string | null;
   purchasedAt?: Date | null;
   warrantyUntil?: Date | null;
   notes?: string | null;
@@ -37,6 +38,7 @@ function toAssetData(data: AssetInput) {
     model: data.model || null,
     serialNumber: data.serialNumber || null,
     location: data.location || null,
+    owner: data.owner || null,
     purchasedAt: data.purchasedAt ?? null,
     warrantyUntil: data.warrantyUntil ?? null,
     notes: data.notes || null,
@@ -95,7 +97,9 @@ export async function deleteAsset(assetId: string): Promise<ActionResult> {
       tasks > 0 ? `${tasks} tarea${tasks === 1 ? "" : "s"} de mantenimiento` : null,
     ].filter(Boolean);
     return {
-      error: `No se puede borrar: tiene ${partes.join(" y ")} asociados. Marcalo como "De baja".`,
+      error: `No se puede borrar: tiene ${partes.join(
+        " y "
+      )} asociados. Si ya no se usa, marcalo como "En inventario".`,
     };
   }
 

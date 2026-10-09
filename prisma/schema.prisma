@@ -169,9 +169,12 @@ enum AssetType {
 }
 
 enum AssetStatus {
+  /// Asignado y funcionando.
   ACTIVE
+  /// En el deposito, sin asignar a nadie.
+  STOCK
+  /// En reparacion.
   REPAIR
-  RETIRED
 }
 
 /// Un equipo del inventario. Los tickets y las tareas periodicas se le cuelgan,
@@ -185,6 +188,8 @@ model Asset {
   model         String?
   serialNumber  String?
   location      String?
+  /// Persona a cargo. Solo aplica a equipos personales (PC, notebook).
+  owner         String?
   status        AssetStatus @default(ACTIVE)
   purchasedAt   DateTime?
   warrantyUntil DateTime?

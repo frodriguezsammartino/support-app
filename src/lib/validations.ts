@@ -96,11 +96,12 @@ const optionalText = (max: number) =>
 export const createAssetSchema = z.object({
   name: z.string().trim().min(2, "Ponele un nombre al equipo").max(120),
   type: z.enum(["PC", "NOTEBOOK", "PRINTER", "SERVER", "NETWORK", "UPS", "PHONE", "OTHER"]),
-  status: z.enum(["ACTIVE", "REPAIR", "RETIRED"]),
+  status: z.enum(["ACTIVE", "STOCK", "REPAIR"]),
   brand: optionalText(80),
   model: optionalText(80),
   serialNumber: optionalText(120),
   location: optionalText(120),
+  owner: optionalText(120),
   purchasedAt: z.coerce.date().nullable().optional(),
   warrantyUntil: z.coerce.date().nullable().optional(),
   notes: optionalText(4000),

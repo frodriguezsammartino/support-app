@@ -10,7 +10,7 @@ export type AssetType =
   | "PHONE"
   | "OTHER";
 
-export type AssetStatus = "ACTIVE" | "REPAIR" | "RETIRED";
+export type AssetStatus = "ACTIVE" | "STOCK" | "REPAIR";
 
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   PC: "PC de escritorio",
@@ -51,11 +51,11 @@ export const ASSET_STATUS_META: Record<
   { label: string; badgeClass: string; rowClass: string }
 > = {
   ACTIVE: { label: "En uso", badgeClass: PILL.success, rowClass: "" },
+  STOCK: { label: "En inventario", badgeClass: PILL.neutral, rowClass: "" },
   REPAIR: { label: "En reparación", badgeClass: PILL.warning, rowClass: ROW_TINT.warning },
-  RETIRED: { label: "De baja", badgeClass: PILL.neutral, rowClass: ROW_TINT.muted },
 };
 
-export const ASSET_STATUS_ORDER: AssetStatus[] = ["ACTIVE", "REPAIR", "RETIRED"];
+export const ASSET_STATUS_ORDER: AssetStatus[] = ["ACTIVE", "STOCK", "REPAIR"];
 
 export type WarrantyState = "NONE" | "VALID" | "EXPIRING" | "EXPIRED";
 
@@ -75,6 +75,11 @@ export function getWarrantyState(warrantyUntil: Date | null): WarrantyState {
   if (remainingDays < 0) return "EXPIRED";
   if (remainingDays <= WARRANTY_WARN_DAYS) return "EXPIRING";
   return "VALID";
+}
+
+/** Solo los equipos personales tienen una persona a cargo. */
+export function hasOwner(type: AssetType) {
+  return type === "PC" || type === "NOTEBOOK";
 }
 
 /** Etiqueta para elegir el equipo en un desplegable. */

@@ -27,7 +27,6 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
   const [categories, assets] = await Promise.all([
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.asset.findMany({
-      where: { status: { not: "RETIRED" } },
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),

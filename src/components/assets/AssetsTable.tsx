@@ -56,6 +56,7 @@ export type AssetRow = {
   brand: string | null;
   model: string | null;
   location: string | null;
+  owner: string | null;
   warrantyUntil: Date | null;
   openTickets: number;
   totalTickets: number;
@@ -168,6 +169,7 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
               <RecordFields>
                 <RecordField label="Tipo">{ASSET_TYPE_SHORT[asset.type]}</RecordField>
                 <RecordField label="Ubicación">{asset.location ?? "—"}</RecordField>
+                {asset.owner && <RecordField label="Responsable">{asset.owner}</RecordField>}
                 {(asset.brand || asset.model) && (
                   <RecordField label="Marca">
                     {[asset.brand, asset.model].filter(Boolean).join(" ")}
@@ -213,7 +215,7 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                   <TableHead className="w-16">#</TableHead>
                   <TableHead>Equipo</TableHead>
                   <TableHead className="w-32">Tipo</TableHead>
-                  <TableHead className="w-44">Ubicación</TableHead>
+                  <TableHead className="w-52">Ubicación / responsable</TableHead>
                   <TableHead className="w-36">Estado</TableHead>
                   <TableHead className="w-40">Garantía</TableHead>
                   <TableHead className="w-28">Tickets</TableHead>
@@ -249,7 +251,14 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                         )}
                       </TableCell>
                       <TableCell className="text-ink-muted">{ASSET_TYPE_SHORT[asset.type]}</TableCell>
-                      <TableCell className="text-ink-muted">{asset.location ?? "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-ink-muted">{asset.location ?? "—"}</span>
+                          {asset.owner && (
+                            <span className="text-xs text-slate-400">{asset.owner}</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
                       </TableCell>

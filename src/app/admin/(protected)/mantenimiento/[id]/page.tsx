@@ -18,7 +18,6 @@ export default async function MaintenanceTaskDetailPage(
   const { id } = await props.params;
 
   const assets = await db.asset.findMany({
-    where: { status: { not: "RETIRED" } },
     select: { id: true, code: true, name: true, location: true },
     orderBy: { code: "asc" },
   });

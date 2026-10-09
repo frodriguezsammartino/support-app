@@ -21,6 +21,7 @@ export default async function EquiposPage() {
     brand: asset.brand,
     model: asset.model,
     location: asset.location,
+    owner: asset.owner,
     warrantyUntil: asset.warrantyUntil,
     openTickets: asset.tickets.filter((t) => t.status !== "COMPLETED").length,
     totalTickets: asset.tickets.length,
@@ -28,6 +29,7 @@ export default async function EquiposPage() {
 
   const inUse = rows.filter((a) => a.status === "ACTIVE").length;
   const inRepair = rows.filter((a) => a.status === "REPAIR").length;
+  const inStock = rows.filter((a) => a.status === "STOCK").length;
   const warrantyExpiring = assets.filter(
     (a) => getWarrantyState(a.warrantyUntil) === "EXPIRING"
   ).length;
@@ -38,9 +40,10 @@ export default async function EquiposPage() {
         <NewAssetDialog />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Equipos" value={String(rows.length)} />
         <KpiCard label="En uso" value={String(inUse)} />
+        <KpiCard label="En inventario" value={String(inStock)} />
         <KpiCard label="En reparación" value={String(inRepair)} />
         <KpiCard label="Garantías por vencer" value={String(warrantyExpiring)} />
       </div>

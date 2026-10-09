@@ -13,7 +13,6 @@ export default async function MantenimientoPage() {
       },
     }),
     db.asset.findMany({
-      where: { status: { not: "RETIRED" } },
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),

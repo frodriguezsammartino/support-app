@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  hasOwner,
   ASSET_STATUS_META,
   ASSET_STATUS_ORDER,
   ASSET_TYPE_LABELS,
@@ -27,6 +28,7 @@ export type AssetFormValues = {
   model: string;
   serialNumber: string;
   location: string;
+  owner: string;
   purchasedAt: string;
   warrantyUntil: string;
   notes: string;
@@ -40,6 +42,7 @@ export const EMPTY_ASSET_FORM: AssetFormValues = {
   model: "",
   serialNumber: "",
   location: "",
+  owner: "",
   purchasedAt: "",
   warrantyUntil: "",
   notes: "",
@@ -119,6 +122,18 @@ export function AssetFormFields({
             placeholder="Ej: Consultorio 3"
           />
         </div>
+
+        {/* Solo los equipos personales tienen un responsable; un router no. */}
+        {hasOwner(values.type) && (
+          <div className="flex flex-col gap-2">
+            <Label>Responsable (opcional)</Label>
+            <Input
+              value={values.owner}
+              onChange={(e) => onChange({ owner: e.target.value })}
+              placeholder="Ej: Dra. Gómez"
+            />
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <Label>Número de serie (opcional)</Label>

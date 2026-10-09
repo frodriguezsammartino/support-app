@@ -4,7 +4,13 @@ import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Ticket as TicketIcon, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
-import { ASSET_STATUS_META, ASSET_TYPE_LABELS, WARRANTY_META, getWarrantyState } from "@/lib/assets";
+import {
+  ASSET_STATUS_META,
+  ASSET_TYPE_LABELS,
+  WARRANTY_META,
+  getWarrantyState,
+  hasOwner,
+} from "@/lib/assets";
 import { describeRecurrence, getNextDueAt } from "@/lib/maintenance";
 import { STATUS_LABELS } from "@/lib/priority";
 import { EditAssetDialog } from "@/components/assets/EditAssetDialog";
@@ -94,6 +100,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Tipo" value={ASSET_TYPE_LABELS[asset.type]} />
             <Field label="Ubicación" value={asset.location ?? "—"} />
+            {hasOwner(asset.type) && <Field label="Responsable" value={asset.owner ?? "—"} />}
             <Field
               label="Marca y modelo"
               value={[asset.brand, asset.model].filter(Boolean).join(" ") || "—"}

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { PendientesTable } from "@/components/backlog/PendientesTable";
 import { HistorialTable } from "@/components/backlog/HistorialTable";
 import { NewInternalTicketDialog } from "@/components/backlog/NewInternalTicketDialog";
+import { TasksSummary } from "@/components/backlog/TasksSummary";
 
 export default async function HomePage() {
   const [pendientes, historial, categories, assets] = await Promise.all([
@@ -18,7 +19,6 @@ export default async function HomePage() {
     }),
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.asset.findMany({
-      where: { status: { not: "RETIRED" } },
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),
@@ -26,6 +26,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-8">
+      <TasksSummary tickets={pendientes} />
+
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Pendientes</h2>
