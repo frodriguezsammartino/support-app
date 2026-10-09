@@ -3,12 +3,12 @@ import {
   getMaintenanceCompletionCount,
   getMaintenanceWeeklyTrend,
   getOldestOpenTicketAgeHours,
+  getOpenSnapshot,
   getResolutionTimeByCategory,
   getTicketsByAsset,
   getTicketsByCategory,
   getTicketsByPriority,
-  getTicketsByStatus,
-  getWeeklyTrend,
+  getWeeklyActivity,
   rangeToFromDate,
   type StatsFilters,
 } from "@/lib/stats";
@@ -16,19 +16,28 @@ import { db } from "@/lib/db";
 import { getMaintenanceStatus } from "@/lib/maintenance";
 import { getLicenseAlert } from "@/lib/licenses";
 import { KpiCard } from "@/components/charts/KpiCard";
-import { TicketsByCategoryChart } from "@/components/charts/TicketsByCategoryChart";
-import { TicketsByAssetChart } from "@/components/charts/TicketsByAssetChart";
-import { TicketsByStatusChart } from "@/components/charts/TicketsByStatusChart";
+import { TicketActivityChart } from "@/components/charts/TicketActivityChart";
 import { TicketsByPriorityChart } from "@/components/charts/TicketsByPriorityChart";
+import { TicketsByCategoryChart } from "@/components/charts/TicketsByCategoryChart";
 import { ResolutionTimeChart } from "@/components/charts/ResolutionTimeChart";
-import { TrendChart } from "@/components/charts/TrendChart";
+import { TicketsByAssetChart } from "@/components/charts/TicketsByAssetChart";
 import { MaintenanceTrendChart } from "@/components/charts/MaintenanceTrendChart";
 import { DashboardFilters } from "@/components/admin/DashboardFilters";
 
 function formatHours(hours: number | null) {
   if (hours == null) return "—";
-  if (hours < 48) return `${Math.round(hours)} hs`;
+  if (hours < 1) return "menos de 1 h";
+  if (hours < 48) return `${Math.round(hours)} h`;
   return `${Math.round(hours / 24)} días`;
+}
+
+function SectionTitle({ children, hint }: { children: string; hint?: string }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-baseline gap-2">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{children}</h2>
+      {hint && <span className="text-xs text-slate-400">{hint}</span>}
+    </div>
+  );
 }
 
 export default async function DashboardPage(props: PageProps<"/admin/dashboard">) {
@@ -40,32 +49,32 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
 
   const [
     kpis,
+    snapshot,
     byCategory,
-    byStatus,
     byPriority,
-    byAsset,
     resolutionByCategory,
-    trend,
+    byAsset,
+    activity,
     maintenanceTrend,
     maintenanceDone,
     oldestOpenHours,
     maintenanceTasks,
-    assetCount,
     licenses,
     categories,
   ] = await Promise.all([
     getKpis(filters),
+    getOpenSnapshot(categoryId),
     getTicketsByCategory(filters),
-    getTicketsByStatus(filters),
     getTicketsByPriority(filters),
-    getTicketsByAsset(filters),
     getResolutionTimeByCategory(filters),
-    getWeeklyTrend(filters),
+    getTicketsByAsset(filters),
+    getWeeklyActivity(filters),
     getMaintenanceWeeklyTrend(filters),
     getMaintenanceCompletionCount(filters),
-    getOldestOpenTicketAgeHours(filters),
-    db.maintenanceTask.findMany({ include: { _count: { select: { completions: { where: { kind: "DONE" } } } } } }),
-    db.asset.count(),
+    getOldestOpenTicketAgeHours(),
+    db.maintenanceTask.findMany({
+      include: { _count: { select: { completions: { where: { kind: "DONE" } } } } },
+    }),
     db.license.findMany({
       where: { status: "ACTIVE" },
       select: { expiresAt: true, autoRenew: true, status: true, billing: true },
@@ -76,11 +85,13 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
   const maintenanceOverdue = maintenanceTasks.filter(
     (t) => getMaintenanceStatus(t, t._count.completions) === "OVERDUE"
   ).length;
-  // Las de renovación automática no piden acción, así que no suman acá.
-  const licensesExpiring = licenses.filter((l) => {
+
+  // Las de renovación automática no piden acción: se cobran solas.
+  const licensesNeedingAction = licenses.filter((l) => {
     const alert = getLicenseAlert(l);
     return alert === "EXPIRING" || alert === "EXPIRED";
   }).length;
+
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;
 
   return (
@@ -89,50 +100,39 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
         <DashboardFilters categories={categories} />
       </div>
 
-      <h2 className="text-sm font-medium uppercase tracking-wide text-ink-muted">Tickets</h2>
-
+      <SectionTitle hint="sin importar el período elegido">Situación ahora</SectionTitle>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total de tickets" value={String(kpis.total)} />
-        <KpiCard label="En Espera" value={String(kpis.backlog)} />
-        <KpiCard label="En Progreso" value={String(kpis.inProgress)} />
-        <KpiCard label="Completados" value={String(kpis.completed)} />
+        <KpiCard label="Tickets abiertos" value={String(snapshot.open)} />
+        <KpiCard label="Urgentes sin resolver" value={String(snapshot.urgent)} />
+        <KpiCard label="Mantenimientos vencidos" value={String(maintenanceOverdue)} />
+        <KpiCard label="Licencias a renovar" value={String(licensesNeedingAction)} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard
-          label="Tiempo promedio de resolución"
-          value={formatHours(kpis.avgResolutionHours)}
-        />
+      <SectionTitle hint="según el período y la categoría del filtro">Rendimiento</SectionTitle>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Tickets creados" value={String(kpis.total)} />
+        <KpiCard label="Tickets resueltos" value={String(kpis.completed)} />
         <KpiCard
           label="Tasa de resolución"
           value={resolutionRate == null ? "—" : `${resolutionRate}%`}
         />
-        <KpiCard label="Espera del ticket más viejo" value={formatHours(oldestOpenHours)} />
+        <KpiCard label="Tiempo promedio" value={formatHours(kpis.avgResolutionHours)} />
       </div>
 
-      <h2 className="mt-2 text-sm font-medium uppercase tracking-wide text-ink-muted">
-        Mantenimiento e inventario
-      </h2>
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Espera del más viejo" value={formatHours(oldestOpenHours)} />
+        <KpiCard label="Sin clasificar" value={String(snapshot.untriaged)} />
+        <KpiCard label="Mantenimientos hechos" value={String(maintenanceDone)} />
         <KpiCard label="Tareas periódicas" value={String(maintenanceTasks.length)} />
-        <KpiCard label="Mantenimientos realizados" value={String(maintenanceDone)} />
-        <KpiCard label="Tareas vencidas ahora" value={String(maintenanceOverdue)} />
-        <KpiCard label="Equipos en el inventario" value={String(assetCount)} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Licencias activas" value={String(licenses.length)} />
-        <KpiCard label="Licencias por vencer" value={String(licensesExpiring)} />
-      </div>
-
+      <SectionTitle>Tendencias</SectionTitle>
       <div className="grid gap-4 lg:grid-cols-2">
-        <TicketsByCategoryChart data={byCategory} />
+        <TicketActivityChart data={activity} />
         <TicketsByPriorityChart data={byPriority} />
-        <TicketsByStatusChart data={byStatus} />
+        <TicketsByCategoryChart data={byCategory} />
         <ResolutionTimeChart data={resolutionByCategory} />
         <TicketsByAssetChart data={byAsset} />
-        <TrendChart data={trend} />
         <MaintenanceTrendChart data={maintenanceTrend} />
       </div>
     </div>

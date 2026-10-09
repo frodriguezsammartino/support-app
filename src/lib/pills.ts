@@ -4,10 +4,10 @@
  * siempre lo mismo, sin importar la pantalla.
  */
 export const PILL = {
-  /** Alta, vencida, urgente: requiere accion. */
+  /** Urgente, vencida: requiere accion ya. */
   danger: "bg-[#FEE2E2] text-[#991B1B] border-transparent",
-  /** Lo mas critico dentro de danger, un paso mas fuerte. */
-  dangerStrong: "bg-[#FECACA] text-[#7F1D1D] border-transparent",
+  /** Alta: un escalon por debajo de urgente, en naranja para que no se confundan. */
+  high: "bg-[#FFEDD5] text-[#9A3412] border-transparent",
   /** Media, por vencer, en reparacion. */
   warning: "bg-[#FEF3C7] text-[#92400E] border-transparent",
   /** Baja, al dia, activa, completado. */

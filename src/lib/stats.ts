@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { PRIORITY_META, PRIORITY_ORDER, STATUS_LABELS } from "./priority";
+import { PRIORITY_META, PRIORITY_ORDER } from "./priority";
 
 export type StatsFilters = {
   from?: Date;
@@ -67,14 +67,6 @@ export async function getTicketsByCategory(filters: StatsFilters = {}) {
   return rows.map((r) => ({ name: r.name, count: Number(r.count) }));
 }
 
-export async function getTicketsByStatus(filters: StatsFilters = {}) {
-  const prismaWhere: Record<string, unknown> = {};
-  if (filters.from) prismaWhere.createdAt = { gte: filters.from };
-  if (filters.categoryId) prismaWhere.categoryId = filters.categoryId;
-
-  const rows = await db.ticket.groupBy({ by: ["status"], where: prismaWhere, _count: true });
-  return rows.map((r) => ({ status: STATUS_LABELS[r.status] ?? r.status, count: r._count }));
-}
 
 export async function getResolutionTimeByCategory(filters: StatsFilters = {}) {
   const conditions = [
@@ -172,17 +164,54 @@ export async function getTicketsByAsset(filters: StatsFilters = {}, limit = 8) {
   return rows.map((r) => ({ name: r.name, count: Number(r.count) }));
 }
 
-export async function getWeeklyTrend(filters: StatsFilters = {}) {
-  const conditions = baseWhere(filters);
-  const rows = await db.$queryRaw<{ week: Date; count: bigint }[]>`
-    SELECT date_trunc('week', "createdAt") AS week, COUNT(*)::bigint AS count
-    FROM "Ticket" t
-    ${whereClause(conditions)}
-    GROUP BY week
-    ORDER BY week ASC
-  `;
-  return rows.map((r) => ({
-    week: r.week.toISOString().slice(0, 10),
-    count: Number(r.count),
-  }));
+/** Creados y resueltos por semana, para ver si el trabajo se acumula o se descarga. */
+export async function getWeeklyActivity(filters: StatsFilters = {}) {
+  const created = baseWhere(filters);
+  const resolved = [Prisma.sql`t."completedAt" IS NOT NULL`, ...baseWhere(filters)];
+
+  const [creados, resueltos] = await Promise.all([
+    db.$queryRaw<{ week: Date; count: bigint }[]>`
+      SELECT date_trunc('week', t."createdAt") AS week, COUNT(*)::bigint AS count
+      FROM "Ticket" t
+      ${whereClause(created)}
+      GROUP BY week
+      ORDER BY week ASC
+    `,
+    db.$queryRaw<{ week: Date; count: bigint }[]>`
+      SELECT date_trunc('week', t."completedAt") AS week, COUNT(*)::bigint AS count
+      FROM "Ticket" t
+      ${whereClause(resolved)}
+      GROUP BY week
+      ORDER BY week ASC
+    `,
+  ]);
+
+  const byWeek = new Map<string, { week: string; creados: number; resueltos: number }>();
+  const touch = (date: Date) => {
+    const week = date.toISOString().slice(0, 10);
+    if (!byWeek.has(week)) byWeek.set(week, { week, creados: 0, resueltos: 0 });
+    return byWeek.get(week)!;
+  };
+  for (const row of creados) touch(row.week).creados = Number(row.count);
+  for (const row of resueltos) touch(row.week).resueltos = Number(row.count);
+
+  return [...byWeek.values()].sort((a, b) => a.week.localeCompare(b.week));
 }
+
+/**
+ * El estado de ahora mismo. No se filtra por período a propósito: un ticket
+ * abierto hace seis meses sigue abierto hoy, aunque el filtro diga "última semana".
+ */
+export async function getOpenSnapshot(categoryId?: string) {
+  const where: Record<string, unknown> = { status: { in: ["BACKLOG", "IN_PROGRESS"] } };
+  if (categoryId) where.categoryId = categoryId;
+
+  const [open, urgent, untriaged] = await Promise.all([
+    db.ticket.count({ where }),
+    db.ticket.count({ where: { ...where, priority: { in: ["HIGH", "URGENT"] } } }),
+    db.ticket.count({ where: { ...where, OR: [{ categoryId: null }, { priority: null }] } }),
+  ]);
+
+  return { open, urgent, untriaged };
+}
+

@@ -19,30 +19,37 @@ import { adminLogout } from "@/lib/actions/admin";
 
 type Section = { href: string; label: string; short: string; icon: LucideIcon };
 
-/** Ordenado de más específico a más general: gana el primer prefijo que matchea. */
+/** El orden en que se muestran las pestañas y el menú. */
 const SECTIONS: Section[] = [
-  { href: "/admin/mantenimiento", label: "Panel de Mantenimiento", short: "Mantenimiento", icon: Wrench },
-  { href: "/admin/equipos", label: "Inventario de Equipos", short: "Equipos", icon: Monitor },
-  { href: "/admin/licencias", label: "Inventario de Licencias", short: "Licencias", icon: KeyRound },
-  { href: "/admin/dashboard", label: "Dashboard", short: "Dashboard", icon: BarChart3 },
   { href: "/admin", label: "Panel de Tareas", short: "Tareas", icon: Home },
+  { href: "/admin/mantenimiento", label: "Panel de Mantenimiento", short: "Mantenimiento", icon: Wrench },
+  { href: "/admin/licencias", label: "Inventario de Licencias", short: "Licencias", icon: KeyRound },
+  { href: "/admin/equipos", label: "Inventario de Equipos", short: "Equipos", icon: Monitor },
+  { href: "/admin/dashboard", label: "Dashboard", short: "Dashboard", icon: BarChart3 },
 ];
 
-/** El mismo orden pero de general a específico, que es como se lee un menú. */
-const NAV_ORDER = [...SECTIONS].reverse();
-
-function matches(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+/**
+ * Cuál sección está activa. "/admin" es prefijo de todas las demás, así que se
+ * busca de más específico a más general y gana el primero que matchea; si no,
+ * cualquier subruta marcaría también la pestaña de Tareas.
+ */
+function activeHref(pathname: string) {
+  const match = [...SECTIONS]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
+  return match?.href ?? "/admin";
 }
 
 function activeSection(pathname: string) {
-  return SECTIONS.find((s) => matches(pathname, s.href)) ?? SECTIONS[SECTIONS.length - 1];
+  const href = activeHref(pathname);
+  return SECTIONS.find((s) => s.href === href) ?? SECTIONS[0];
 }
 
 export function AdminHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const current = activeSection(pathname);
+  const currentHref = activeHref(pathname);
 
   return (
     <header className="border-b border-line bg-white">
@@ -96,8 +103,8 @@ export function AdminHeader() {
               Panel técnico
             </span>
             <div className="flex items-center">
-              {NAV_ORDER.map((section) => {
-                const active = matches(pathname, section.href);
+              {SECTIONS.map((section) => {
+                const active = section.href === currentHref;
                 const Icon = section.icon;
                 return (
                   <Link
@@ -144,8 +151,8 @@ export function AdminHeader() {
             </div>
 
             <nav className="flex flex-1 flex-col gap-0.5 p-2">
-              {NAV_ORDER.map((section) => {
-                const active = matches(pathname, section.href);
+              {SECTIONS.map((section) => {
+                const active = section.href === currentHref;
                 const Icon = section.icon;
                 return (
                   <Link

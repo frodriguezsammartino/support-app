@@ -9,25 +9,25 @@ export const PRIORITY_META: Record<
     label: "Baja",
     description: "Puede esperar, no afecta el trabajo diario",
     badgeClass: PILL.success,
-    dot: "bg-[#166534]",
+    dot: "bg-[#16A34A]",
   },
   MEDIUM: {
     label: "Media",
     description: "Conviene resolverlo pronto, pero no es urgente",
     badgeClass: PILL.warning,
-    dot: "bg-[#92400E]",
+    dot: "bg-[#F59E0B]",
   },
   HIGH: {
     label: "Alta",
     description: "Afecta el trabajo, hay que resolverlo hoy",
-    badgeClass: PILL.danger,
-    dot: "bg-[#991B1B]",
+    badgeClass: PILL.high,
+    dot: "bg-[#EA580C]",
   },
   URGENT: {
     label: "Urgente",
     description: "Necesito ayuda ya, está frenando la atención",
-    badgeClass: PILL.dangerStrong,
-    dot: "bg-[#7F1D1D]",
+    badgeClass: PILL.danger,
+    dot: "bg-[#DC2626]",
   },
 };
 
@@ -47,9 +47,9 @@ export const STATUS_LABELS = {
 } as const;
 
 export const STATUS_DOT: Record<keyof typeof STATUS_LABELS, string> = {
-  BACKLOG: "bg-[#334155]",
+  BACKLOG: "bg-[#64748B]",
   IN_PROGRESS: "bg-brand",
-  COMPLETED: "bg-[#166534]",
+  COMPLETED: "bg-[#16A34A]",
 };
 
 export const STATUS_PILL: Record<keyof typeof STATUS_LABELS, string> = {
