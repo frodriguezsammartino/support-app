@@ -1,7 +1,7 @@
 "use client";
 
 import { useTicketStatusFlow } from "./useTicketStatusFlow";
-import { STATUS_DOT, STATUS_LABELS } from "@/lib/priority";
+import { STATUS_CHIP, STATUS_DOT, STATUS_LABELS } from "@/lib/priority";
 import {
   Select,
   SelectContent,
@@ -40,7 +40,10 @@ export function StatusQuickEditor({
           attemptChange({ id: ticketId, title, status }, value as TicketStatus);
         }}
       >
-        <SelectTrigger size="sm" className="h-7 w-auto gap-1">
+        <SelectTrigger
+          size="sm"
+          className={`h-7 w-auto gap-1 border ${STATUS_CHIP[status]}`}
+        >
           <SelectValue placeholder="Estado">
             {(value: string) => (
               <span className="flex items-center gap-1.5 text-xs font-medium">

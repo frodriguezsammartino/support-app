@@ -6,21 +6,15 @@ import { MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
 import { addMaintenanceNote } from "@/lib/actions/maintenance";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { WhenPicker } from "@/components/ui/when-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
   const router = useRouter();
   const [note, setNote] = useState("");
-  const [at, setAt] = useState("");
+  const [at, setAt] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
-  // Lazy init: leer el reloj durante el render rompe la regla de pureza de React.
-  const [nowLocalValue] = useState(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
-  });
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-slate-50 p-3">
@@ -36,16 +30,10 @@ export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
         onChange={(e) => setNote(e.target.value)}
       />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-ink-muted">¿Cuándo? (opcional)</Label>
-          <Input
-            type="datetime-local"
-            className="h-9 w-56"
-            max={nowLocalValue}
-            value={at}
-            onChange={(e) => setAt(e.target.value)}
-          />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-ink-muted">¿Cuándo?</Label>
+          <WhenPicker value={at} onChange={setAt} />
         </div>
 
         <Button
@@ -53,17 +41,13 @@ export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
           disabled={isPending || note.trim().length < 2}
           onClick={() => {
             startTransition(async () => {
-              const result = await addMaintenanceNote(
-                taskId,
-                note,
-                at ? new Date(at) : undefined
-              );
+              const result = await addMaintenanceNote(taskId, note, at ?? undefined);
               if (result.error) {
                 toast.error(result.error);
                 return;
               }
               setNote("");
-              setAt("");
+              setAt(null);
               router.refresh();
             });
           }}

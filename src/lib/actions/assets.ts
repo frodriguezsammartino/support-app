@@ -82,7 +82,21 @@ export async function updateAssetStatus(assetId: string, status: AssetStatus): P
   return {};
 }
 
-export async function deleteAsset(assetId: string): Promise<ActionResult> {
+export type DeleteAssetResult = ActionResult & {
+  /** El equipo tiene historial: hay que confirmar antes de borrarlo. */
+  code?: "HAS_LINKS";
+  tickets?: number;
+  tasks?: number;
+};
+
+/**
+ * Borra un equipo. Si tiene tickets o tareas asociados pide confirmación una vez
+ * más (code: "HAS_LINKS") y, al confirmar, los desvincula en lugar de borrarlos:
+ * el historial de lo que pasó se conserva, solo deja de apuntar a un equipo que
+ * ya no existe. Hace falta para el caso real de tirar una máquina que no se pudo
+ * reparar.
+ */
+export async function deleteAsset(assetId: string, force = false): Promise<DeleteAssetResult> {
   await requireAdmin();
 
   const [tickets, tasks] = await Promise.all([
@@ -90,24 +104,22 @@ export async function deleteAsset(assetId: string): Promise<ActionResult> {
     db.maintenanceTask.count({ where: { assetId } }),
   ]);
 
-  // Borrar el equipo dejaría huérfano su historial: mejor avisar y que lo dé de baja.
-  if (tickets > 0 || tasks > 0) {
-    const partes = [
-      tickets > 0 ? `${tickets} ticket${tickets === 1 ? "" : "s"}` : null,
-      tasks > 0 ? `${tasks} tarea${tasks === 1 ? "" : "s"} de mantenimiento` : null,
-    ].filter(Boolean);
-    return {
-      error: `No se puede borrar: tiene ${partes.join(
-        " y "
-      )} asociados. Si ya no se usa, marcalo como "En inventario".`,
-    };
+  if (!force && (tickets > 0 || tasks > 0)) {
+    return { code: "HAS_LINKS", tickets, tasks };
   }
 
-  await db.asset.delete({ where: { id: assetId } });
+  await db.$transaction([
+    db.ticket.updateMany({ where: { assetId }, data: { assetId: null } }),
+    db.maintenanceTask.updateMany({ where: { assetId }, data: { assetId: null } }),
+    db.asset.delete({ where: { id: assetId } }),
+  ]);
 
   revalidateAssets(assetId);
+  revalidatePath("/admin");
+  revalidatePath("/admin/mantenimiento");
   return {};
 }
+
 
 /** Vincula o desvincula un ticket de un equipo. */
 export async function updateTicketAsset(ticketId: string, assetId: string | null): Promise<ActionResult> {

@@ -83,8 +83,38 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
 
   function handleDelete(asset: AssetRow) {
     if (!confirm(`¿Eliminar "${asset.name}" del inventario?`)) return;
+
     startTransition(async () => {
       const result = await deleteAsset(asset.id);
+
+      // Tiene historial: se avisa qué queda y se vuelve a pedir confirmación.
+      if (result.code === "HAS_LINKS") {
+        const partes = [
+          result.tickets ? `${result.tickets} ticket${result.tickets === 1 ? "" : "s"}` : null,
+          result.tasks
+            ? `${result.tasks} tarea${result.tasks === 1 ? "" : "s"} de mantenimiento`
+            : null,
+        ].filter(Boolean);
+
+        const ok = confirm(
+          `"${asset.name}" tiene ${partes.join(" y ")} asociados.
+
+` +
+            "Si lo borrás, ese historial se conserva pero deja de estar vinculado al equipo. " +
+            "¿Querés borrarlo igual?"
+        );
+        if (!ok) return;
+
+        const forced = await deleteAsset(asset.id, true);
+        if (forced.error) {
+          toast.error(forced.error);
+          return;
+        }
+        toast.success("Equipo eliminado.");
+        router.refresh();
+        return;
+      }
+
       if (result.error) {
         toast.error(result.error);
         return;

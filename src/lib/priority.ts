@@ -47,9 +47,16 @@ export const STATUS_LABELS = {
 } as const;
 
 export const STATUS_DOT: Record<keyof typeof STATUS_LABELS, string> = {
-  BACKLOG: "bg-[#64748B]",
-  IN_PROGRESS: "bg-brand",
+  BACKLOG: "bg-[#94A3B8]",
+  IN_PROGRESS: "bg-[#075573]",
   COMPLETED: "bg-[#16A34A]",
+};
+
+/** Fondo del selector de estado: gris esperando, azul en curso, verde cerrado. */
+export const STATUS_CHIP: Record<keyof typeof STATUS_LABELS, string> = {
+  BACKLOG: "bg-[#E2E8F0] text-[#334155] border-[#CBD5E1]",
+  IN_PROGRESS: "bg-[#DBEAFE] text-[#075573] border-[#BFDBFE]",
+  COMPLETED: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
 };
 
 export const STATUS_PILL: Record<keyof typeof STATUS_LABELS, string> = {

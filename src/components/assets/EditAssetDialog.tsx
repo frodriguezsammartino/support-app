@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { RepairTicketDialog, type OpenTicketOption } from "./RepairTicketDialog";
 
 export type EditableAsset = {
   id: string;
@@ -54,10 +55,22 @@ function toFormValues(asset: EditableAsset): AssetFormValues {
   };
 }
 
-export function EditAssetDialog({ asset }: { asset: EditableAsset }) {
+export function EditAssetDialog({
+  asset,
+  categories = [],
+  openTickets = [],
+  hasOpenTicket = false,
+}: {
+  asset: EditableAsset;
+  categories?: { id: string; name: string }[];
+  openTickets?: OpenTicketOption[];
+  /** Si ya tiene un ticket abierto no hace falta pedir otro. */
+  hasOpenTicket?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<AssetFormValues>(() => toFormValues(asset));
+  const [askRepair, setAskRepair] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -109,6 +122,10 @@ export function EditAssetDialog({ asset }: { asset: EditableAsset }) {
                   return;
                 }
                 setOpen(false);
+                // Pasó a reparación y no hay ticket que la siga: se ofrece cargarlo.
+                const needsTicket =
+                  values.status === "REPAIR" && asset.status !== "REPAIR" && !hasOpenTicket;
+                if (needsTicket && categories.length > 0) setAskRepair(true);
                 router.refresh();
               });
             }}
@@ -117,6 +134,15 @@ export function EditAssetDialog({ asset }: { asset: EditableAsset }) {
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <RepairTicketDialog
+        open={askRepair}
+        onOpenChange={setAskRepair}
+        assetId={asset.id}
+        assetName={asset.name}
+        categories={categories}
+        openTickets={openTickets}
+      />
     </Dialog>
   );
 }

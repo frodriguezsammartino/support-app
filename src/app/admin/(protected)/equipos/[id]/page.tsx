@@ -39,6 +39,16 @@ function Field({ label, value }: { label: string; value: string }) {
 export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[id]">) {
   const { id } = await props.params;
 
+  const [categories, unassignedTickets] = await Promise.all([
+    db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    db.ticket.findMany({
+      where: { status: { in: ["BACKLOG", "IN_PROGRESS"] }, assetId: null },
+      select: { id: true, number: true, title: true },
+      orderBy: { number: "desc" },
+      take: 50,
+    }),
+  ]);
+
   const asset = await db.asset.findUnique({
     where: { id },
     include: {
@@ -128,7 +138,12 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
           <Separator />
 
           <div className="flex flex-wrap items-center gap-3">
-            <EditAssetDialog asset={asset} />
+            <EditAssetDialog
+              asset={asset}
+              categories={categories}
+              openTickets={unassignedTickets}
+              hasOpenTicket={openTickets.length > 0}
+            />
             <span className="text-sm text-ink-muted">
               {asset.tickets.length} ticket{asset.tickets.length === 1 ? "" : "s"} en total
               {openTickets.length > 0 && (

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { PRIORITY_META, PRIORITY_ORDER } from "@/lib/priority";
 import { AssetPicker, type AssetOption } from "@/components/assets/AssetPicker";
+import { WhenPicker } from "@/components/ui/when-picker";
 import type { TicketPriority } from "@prisma/client";
 
 const EMPTY = {
@@ -36,7 +37,6 @@ const EMPTY = {
   categoryId: "",
   priority: "" as TicketPriority | "",
   assetId: "",
-  createdAt: "",
 };
 
 export function NewInternalTicketDialog({
@@ -49,13 +49,8 @@ export function NewInternalTicketDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [when, setWhen] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
-  // Lazy init: leer el reloj durante el render rompe la regla de pureza de React.
-  const [nowLocalValue] = useState(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
-  });
   const categoryLabels = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 
   function update<K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) {
@@ -66,7 +61,10 @@ export function NewInternalTicketDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setForm(EMPTY);
+        if (!next) {
+          setForm(EMPTY);
+          setWhen(null);
+        }
         setOpen(next);
       }}
     >
@@ -155,18 +153,8 @@ export function NewInternalTicketDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>¿Cuándo pasó? (opcional)</Label>
-            <Input
-              type="datetime-local"
-              className="w-60"
-              max={nowLocalValue}
-              value={form.createdAt}
-              onChange={(e) => update("createdAt", e.target.value)}
-            />
-            <p className="text-xs text-ink-muted">
-              Si lo dejás vacío se usa la fecha y hora de ahora. Sirve para cargar después algo
-              que viste antes.
-            </p>
+            <Label>¿Cuándo pasó?</Label>
+            <WhenPicker value={when} onChange={setWhen} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -198,7 +186,7 @@ export function NewInternalTicketDialog({
                   priority: form.priority as TicketPriority,
                   reporterName: form.reporterName || undefined,
                   assetId: form.assetId || undefined,
-                  createdAt: form.createdAt ? new Date(form.createdAt) : undefined,
+                  createdAt: when ?? undefined,
                 });
                 if (result.error) {
                   toast.error(result.error);
