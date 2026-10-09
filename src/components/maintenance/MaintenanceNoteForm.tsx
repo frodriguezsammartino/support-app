@@ -23,9 +23,9 @@ export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-zinc-50/60 p-3">
+    <div className="flex flex-col gap-3 rounded-lg border bg-slate-50 p-3">
       <div className="flex items-center gap-2">
-        <MessageSquarePlus className="size-4 text-blue-600" />
+        <MessageSquarePlus className="size-4 text-brand" />
         <span className="text-sm font-medium">Agregar una observación</span>
       </div>
 
@@ -38,7 +38,7 @@ export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <Label className="text-xs text-zinc-500">¿Cuándo? (opcional)</Label>
+          <Label className="text-xs text-ink-muted">¿Cuándo? (opcional)</Label>
           <Input
             type="datetime-local"
             className="h-9 w-56"
@@ -72,7 +72,7 @@ export function MaintenanceNoteForm({ taskId }: { taskId: string }) {
         </Button>
       </div>
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-ink-muted">
         Una observación queda registrada pero no cuenta como que hiciste la tarea: el próximo
         vencimiento no se mueve.
       </p>

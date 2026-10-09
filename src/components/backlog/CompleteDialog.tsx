@@ -51,7 +51,7 @@ export function CompleteDialog({
             onChange={(e) => setNote(e.target.value)}
             autoFocus
           />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-[#991B1B]">{error}</p>}
         </div>
         <DialogFooter>
           <Button

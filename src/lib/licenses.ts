@@ -1,3 +1,5 @@
+import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
+
 export type LicenseBilling = "MONTHLY" | "YEARLY" | "ONE_TIME";
 export type LicenseStatus = "ACTIVE" | "CANCELLED";
 
@@ -13,16 +15,8 @@ export const LICENSE_STATUS_META: Record<
   LicenseStatus,
   { label: string; badgeClass: string; rowClass: string }
 > = {
-  ACTIVE: {
-    label: "Activa",
-    badgeClass: "bg-[#0ca30c] text-white border-transparent",
-    rowClass: "",
-  },
-  CANCELLED: {
-    label: "Dada de baja",
-    badgeClass: "bg-zinc-500 text-white border-transparent",
-    rowClass: "opacity-60",
-  },
+  ACTIVE: { label: "Activa", badgeClass: PILL.success, rowClass: "" },
+  CANCELLED: { label: "Dada de baja", badgeClass: PILL.neutral, rowClass: ROW_TINT.muted },
 };
 
 export const LICENSE_STATUS_ORDER: LicenseStatus[] = ["ACTIVE", "CANCELLED"];
@@ -86,11 +80,11 @@ export function centsToInput(cents: number | null) {
 export type LicenseAlert = "NONE" | "VALID" | "AUTO" | "EXPIRING" | "EXPIRED";
 
 export const ALERT_META: Record<LicenseAlert, { label: string; className: string }> = {
-  NONE: { label: "Sin vencimiento", className: "text-zinc-400" },
-  VALID: { label: "Vigente", className: "text-zinc-600" },
-  AUTO: { label: "Se renueva sola", className: "text-zinc-600" },
-  EXPIRING: { label: "Por vencer", className: "text-amber-700 font-medium" },
-  EXPIRED: { label: "Vencida", className: "text-red-700 font-medium" },
+  NONE: { label: "Sin vencimiento", className: "text-ink-muted/70" },
+  VALID: { label: "Vigente", className: "text-ink-muted" },
+  AUTO: { label: "Se renueva sola", className: "text-ink-muted" },
+  EXPIRING: { label: "Por vencer", className: STATE_TEXT.warning },
+  EXPIRED: { label: "Vencida", className: STATE_TEXT.danger },
 };
 
 type LicenseLike = {

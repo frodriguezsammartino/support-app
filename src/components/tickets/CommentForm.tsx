@@ -12,7 +12,7 @@ export function CommentForm({ ticketId }: { ticketId: string }) {
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="ticketId" value={ticketId} />
       <Textarea name="body" rows={3} placeholder="Agregar una nota interna..." required />
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-sm text-[#991B1B]">{state.error}</p>}
       <Button type="submit" disabled={pending} variant="secondary" className="self-start">
         {pending ? "Guardando..." : "Agregar nota"}
       </Button>

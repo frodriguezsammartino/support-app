@@ -14,7 +14,7 @@ export function SuccessCelebration({ show }: { show: boolean }) {
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="flex size-24 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl"
+            className="flex size-24 items-center justify-center rounded-full bg-brand text-white shadow-xl"
             initial={{ scale: 0 }}
             animate={{ scale: [0, 1.15, 1] }}
             exit={{ scale: 0, opacity: 0 }}

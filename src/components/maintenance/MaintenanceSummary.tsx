@@ -21,22 +21,22 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
   const allClear = rows.length > 0 && pending.length === 0;
 
   return (
-    <Card className={`border-t-4 ${allClear ? "border-t-[#0ca30c]" : "border-t-blue-600"}`}>
+    <Card className={`border-t-4 ${allClear ? "border-t-[#166534]" : "border-t-brand"}`}>
       <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           {allClear ? (
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#0ca30c]" />
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#166534]" />
           ) : (
-            <CalendarClock className="mt-0.5 size-5 shrink-0 text-blue-600" />
+            <CalendarClock className="mt-0.5 size-5 shrink-0 text-brand" />
           )}
           <div className="flex flex-col gap-0.5">
             {allClear ? (
               <>
-                <span className="text-lg font-semibold leading-tight text-[#0ca30c]">
+                <span className="text-lg font-semibold leading-tight text-[#166534]">
                   Estás al día
                 </span>
                 {next ? (
-                  <span className="text-sm text-zinc-600">
+                  <span className="text-sm text-ink-muted">
                     No hay nada vencido ni por vencer. La próxima es{" "}
                     <Link
                       href={`/admin/mantenimiento/${next.id}`}
@@ -45,20 +45,20 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
                       {next.title}
                     </Link>
                     , en {formatDistanceToNow(next.nextDueAt, { locale: es })}
-                    <span className="text-zinc-400">
+                    <span className="text-slate-400">
                       {" · "}
                       {format(next.nextDueAt, "dd/MM/yyyy HH:mm")}
                     </span>
                   </span>
                 ) : (
-                  <span className="text-sm text-zinc-600">
+                  <span className="text-sm text-ink-muted">
                     No queda ninguna tarea pendiente.
                   </span>
                 )}
               </>
             ) : (
               <>
-                <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
                   Próxima tarea a vencer
                 </span>
                 {next ? (
@@ -73,14 +73,14 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
                       {next.status === "OVERDUE"
                         ? `Venció hace ${formatDistanceToNow(next.nextDueAt, { locale: es })}`
                         : `Vence en ${formatDistanceToNow(next.nextDueAt, { locale: es })}`}
-                      <span className="font-normal text-zinc-500">
+                      <span className="font-normal text-ink-muted">
                         {" · "}
                         {format(next.nextDueAt, "dd/MM/yyyy HH:mm")}
                       </span>
                     </span>
                   </>
                 ) : (
-                  <span className="text-sm text-zinc-500">Todavía no cargaste ninguna tarea.</span>
+                  <span className="text-sm text-ink-muted">Todavía no cargaste ninguna tarea.</span>
                 )}
               </>
             )}
@@ -97,7 +97,7 @@ export function MaintenanceSummary({ rows }: { rows: MaintenanceRow[] }) {
                 className="flex min-w-24 flex-col items-center gap-0.5 rounded-lg border bg-white px-3 py-2"
               >
                 <span className="text-xl font-semibold leading-none">{count}</span>
-                <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <span className="flex items-center gap-1.5 text-xs text-ink-muted">
                   <span className={`size-2 rounded-full ${meta.dot}`} />
                   {label}
                 </span>

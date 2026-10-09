@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default function AdminProtectedLayout({ children }: LayoutProps<"/admin">) {
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
+    <div className="flex flex-1 flex-col bg-background">
       <AdminHeader />
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</div>
     </div>

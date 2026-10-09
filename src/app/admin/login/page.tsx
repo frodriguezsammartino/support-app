@@ -12,10 +12,10 @@ export default function AdminLoginPage() {
   const [state, action, pending] = useActionState(adminLogin, undefined);
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-zinc-50 px-4">
+    <main className="flex flex-1 items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="flex flex-col items-center gap-2 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-blue-600 text-white">
+          <span className="flex size-12 items-center justify-center rounded-full bg-brand text-white">
             <Lock className="size-6" />
           </span>
           <CardTitle>Acceso técnico</CardTitle>
@@ -26,8 +26,8 @@ export default function AdminLoginPage() {
               <Label htmlFor="password">Contraseña</Label>
               <Input id="password" name="password" type="password" required autoFocus />
             </div>
-            {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-            <Button type="submit" disabled={pending} className="bg-blue-600 hover:bg-blue-700">
+            {state?.error && <p className="text-sm text-[#991B1B]">{state.error}</p>}
+            <Button type="submit" disabled={pending} className="bg-brand hover:bg-brand-hover">
               {pending ? "Ingresando..." : "Ingresar"}
             </Button>
           </form>

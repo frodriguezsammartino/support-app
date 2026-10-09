@@ -37,7 +37,7 @@ export function ReopenControl({
         }}
       >
         <SelectTrigger size="sm" className="h-7 gap-1">
-          <RotateCcw className="size-3.5 text-zinc-500" />
+          <RotateCcw className="size-3.5 text-ink-muted" />
           <SelectValue placeholder="Reabrir" />
         </SelectTrigger>
         <SelectContent>

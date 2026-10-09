@@ -113,7 +113,7 @@ export function LicenseFormFields({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-zinc-50/60 p-3">
+      <div className="rounded-lg border bg-slate-50 p-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label>Puestos que pagamos</Label>
@@ -136,12 +136,12 @@ export function LicenseFormFields({
         </div>
         <p className="mt-2 text-xs">
           {available < 0 ? (
-            <span className="font-medium text-red-700">
+            <span className="font-medium text-[#991B1B]">
               Hay {Math.abs(available)} puesto{Math.abs(available) === 1 ? "" : "s"} de más en uso:
               estás usando más de lo que pagás.
             </span>
           ) : (
-            <span className="text-zinc-600">
+            <span className="text-ink-muted">
               Quedan <span className="font-medium">{available}</span> puesto
               {available === 1 ? "" : "s"} disponible{available === 1 ? "" : "s"}.
             </span>
@@ -217,7 +217,7 @@ export function LicenseFormFields({
           className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
             values.autoRenew
               ? "border-[#184f95] bg-[#eaf2fc] text-[#184f95]"
-              : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
+              : "border-line bg-white text-ink-muted hover:bg-slate-100"
           }`}
         >
           <span
@@ -231,7 +231,7 @@ export function LicenseFormFields({
         </button>
       </div>
 
-      <p className="-mt-1 text-xs text-zinc-500">
+      <p className="-mt-1 text-xs text-ink-muted">
         {values.autoRenew
           ? "Se cobra sola, no hay que hacer nada al vencer. Igual se usa la fecha para saber cuándo cae la factura."
           : "Hay que renovarla a mano: va a aparecer como vencida o por vencer."}

@@ -48,7 +48,7 @@ export function CompleteMaintenanceDialog({
             title={done ? "Ya se hizo. Podés registrarla de nuevo si hace falta." : "Registrar que la hiciste"}
             className={
               done
-                ? "border-[#0ca30c] bg-[#0ca30c]/10 text-[#0ca30c] hover:bg-[#0ca30c]/20 hover:text-[#0ca30c]"
+                ? "border-[#166534]/40 bg-[#DCFCE7] text-[#166534] hover:bg-[#DCFCE7] hover:text-[#166534]"
                 : undefined
             }
           >

@@ -35,16 +35,16 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <Link href="/admin" className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900">
+      <Link href="/admin" className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink">
         <ArrowLeft className="size-4" />
         Volver al inicio
       </Link>
 
-      <Card className="border-t-4 border-t-blue-600">
+      <Card className="border-t-4 border-t-brand">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-xl">
-              <span className="text-zinc-400">#{ticket.number}</span>{" "}
+              <span className="text-slate-400">#{ticket.number}</span>{" "}
               <TicketTitleEditor
                 ticketId={ticket.id}
                 title={ticket.title}
@@ -59,11 +59,11 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <p className="whitespace-pre-wrap text-sm text-zinc-700">
+          <p className="whitespace-pre-wrap text-sm text-ink">
             {ticket.description || "Sin descripción adicional."}
           </p>
           <Separator />
-          <div className="grid gap-1 text-sm text-zinc-500 sm:grid-cols-2">
+          <div className="grid gap-1 text-sm text-ink-muted sm:grid-cols-2">
             <p>Reportado por: {ticket.reporterName}</p>
             <p>Email: {ticket.reporterEmail}</p>
             <p>Categoría: {ticket.category?.name ?? "Sin categoría"}</p>
@@ -71,13 +71,13 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
             {ticket.completedAt && <p>Resuelto: {ticket.completedAt.toLocaleString("es-AR")}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-zinc-500">Equipo:</span>
+            <span className="text-sm text-ink-muted">Equipo:</span>
             <TicketAssetEditor ticketId={ticket.id} assetId={ticket.assetId} assets={assets} />
           </div>
           {ticket.resolutionNote && (
-            <div className="rounded-lg bg-zinc-50 p-3 text-sm">
+            <div className="rounded-lg bg-slate-50 p-3 text-sm">
               <p className="font-medium">Nota de resolución</p>
-              <p className="whitespace-pre-wrap text-zinc-700">{ticket.resolutionNote}</p>
+              <p className="whitespace-pre-wrap text-ink">{ticket.resolutionNote}</p>
             </div>
           )}
         </CardContent>
@@ -91,11 +91,11 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {ticket.comments.length === 0 && (
-            <p className="text-sm text-zinc-500">Todavía no hay notas.</p>
+            <p className="text-sm text-ink-muted">Todavía no hay notas.</p>
           )}
           {ticket.comments.map((comment) => (
             <div key={comment.id} className="rounded-lg border p-3 text-sm">
-              <div className="mb-1 text-xs text-zinc-500">{comment.createdAt.toLocaleString("es-AR")}</div>
+              <div className="mb-1 text-xs text-ink-muted">{comment.createdAt.toLocaleString("es-AR")}</div>
               <p className="whitespace-pre-wrap">{comment.body}</p>
             </div>
           ))}

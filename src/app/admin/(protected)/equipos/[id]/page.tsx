@@ -23,8 +23,8 @@ type HistoryEntry = {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-zinc-50/60 p-3">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
+    <div className="rounded-lg border bg-slate-50 p-3">
+      <p className="text-xs uppercase tracking-wide text-ink-muted">{label}</p>
       <p className="text-sm font-medium">{value}</p>
     </div>
   );
@@ -75,17 +75,17 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <Link
         href="/admin/equipos"
-        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900"
+        className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
       >
         <ArrowLeft className="size-4" />
         Volver al inventario
       </Link>
 
-      <Card className="border-t-4 border-t-blue-600">
+      <Card className="border-t-4 border-t-brand">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <CardTitle className="text-xl">
-              <span className="text-zinc-400">#{asset.code}</span> {asset.name}
+              <span className="text-slate-400">#{asset.code}</span> {asset.name}
             </CardTitle>
             <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
           </div>
@@ -103,17 +103,17 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               label="Compra"
               value={asset.purchasedAt ? format(asset.purchasedAt, "dd/MM/yyyy") : "—"}
             />
-            <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Garantía</p>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-ink-muted">Garantía</p>
               <p className={`text-sm font-medium ${warrantyMeta.className}`}>{warrantyMeta.label}</p>
               {asset.warrantyUntil && (
-                <p className="text-xs text-zinc-400">{format(asset.warrantyUntil, "dd/MM/yyyy")}</p>
+                <p className="text-xs text-slate-400">{format(asset.warrantyUntil, "dd/MM/yyyy")}</p>
               )}
             </div>
           </div>
 
           {asset.notes && (
-            <p className="whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">
+            <p className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-ink">
               {asset.notes}
             </p>
           )}
@@ -122,10 +122,10 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
 
           <div className="flex flex-wrap items-center gap-3">
             <EditAssetDialog asset={asset} />
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm text-ink-muted">
               {asset.tickets.length} ticket{asset.tickets.length === 1 ? "" : "s"} en total
               {openTickets.length > 0 && (
-                <span className="font-medium text-blue-700">
+                <span className="font-medium text-brand">
                   {" "}
                   · {openTickets.length} sin cerrar
                 </span>
@@ -152,7 +152,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
                 >
                   {task.title}
                 </Link>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-ink-muted">
                   {describeRecurrence(task)} · próxima{" "}
                   {format(getNextDueAt(task), "dd/MM/yyyy HH:mm")}
                 </span>
@@ -166,14 +166,14 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
         <CardHeader>
           <CardTitle className="text-base">
             Historial del equipo
-            <span className="ml-2 text-sm font-normal text-zinc-500">
+            <span className="ml-2 text-sm font-normal text-ink-muted">
               {history.length} registro{history.length === 1 ? "" : "s"}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-0">
           {history.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-ink-muted">
               Todavía no hay tickets ni mantenimientos registrados para este equipo.
             </p>
           )}
@@ -183,7 +183,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               <div className="flex flex-col items-center">
                 <span
                   className={`mt-1 flex size-6 shrink-0 items-center justify-center rounded-full ${
-                    entry.kind === "TICKET" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                    entry.kind === "TICKET" ? "bg-brand-tint text-brand" : "bg-[#DCFCE7] text-[#166534]"
                   }`}
                 >
                   {entry.kind === "TICKET" ? (
@@ -192,7 +192,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
                     <Wrench className="size-3.5" />
                   )}
                 </span>
-                {index < history.length - 1 && <span className="w-px flex-1 bg-zinc-200" />}
+                {index < history.length - 1 && <span className="w-px flex-1 bg-slate-200" />}
               </div>
               <div className={index < history.length - 1 ? "pb-5" : ""}>
                 <p className="text-sm leading-tight">
@@ -204,12 +204,12 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
                     <span className="font-medium">{entry.title}</span>
                   )}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-slate-400">
                   {format(entry.at, "dd/MM/yyyy HH:mm")} · hace{" "}
                   {formatDistanceToNow(entry.at, { locale: es })}
                 </p>
                 {entry.detail && (
-                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-zinc-600">{entry.detail}</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-ink-muted">{entry.detail}</p>
                 )}
               </div>
             </div>

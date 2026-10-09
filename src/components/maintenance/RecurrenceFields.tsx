@@ -105,7 +105,7 @@ function WeekdayPicker({
             className={`size-8 rounded-full border text-sm transition-colors ${
               on
                 ? "border-transparent bg-[#184f95] font-medium text-white"
-                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
+                : "border-line bg-white text-ink-muted hover:bg-slate-100"
             }`}
           >
             {initial}
@@ -153,7 +153,7 @@ export function RecurrenceFields({
   const showTime = recurrence.freq !== "HOUR";
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-zinc-50/60 p-3">
+    <div className="flex flex-col gap-3 rounded-lg border bg-slate-50 p-3">
       <div className="flex flex-col gap-2">
         <Label>Se repite</Label>
         <Select value={preset} onValueChange={(v) => v && applyPreset(v as PresetKey)}>
@@ -367,12 +367,12 @@ export function RecurrenceFields({
               value={String(recurrence.endCount ?? 1)}
               onChange={(e) => patch({ endCount: Math.max(1, Number(e.target.value) || 1) })}
             />
-            <span className="pb-2 text-sm text-zinc-600">repeticiones</span>
+            <span className="pb-2 text-sm text-ink-muted">repeticiones</span>
           </div>
         )}
       </div>
 
-      <p className="text-xs text-zinc-500">{describeRecurrence(recurrence)}</p>
+      <p className="text-xs text-ink-muted">{describeRecurrence(recurrence)}</p>
     </div>
   );
 }

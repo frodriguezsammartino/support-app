@@ -3,7 +3,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const TEAL = "#1baf7a";
+const TEAL = "#166534";
 
 export function MaintenanceTrendChart({ data }: { data: { week: string; count: number }[] }) {
   return (
@@ -13,21 +13,21 @@ export function MaintenanceTrendChart({ data }: { data: { week: string; count: n
       </CardHeader>
       <CardContent className="h-72">
         {data.length === 0 ? (
-          <p className="flex h-full items-center justify-center text-sm text-zinc-500">
+          <p className="flex h-full items-center justify-center text-sm text-ink-muted">
             Todavía no hay mantenimientos registrados en este período.
           </p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ left: 0, right: 12 }}>
-              <CartesianGrid stroke="#e1e0d9" vertical={false} />
+              <CartesianGrid stroke="#E2E8F0" vertical={false} />
               <XAxis
                 dataKey="week"
-                stroke="#898781"
+                stroke="#5E7A8A"
                 fontSize={12}
                 tickLine={false}
-                axisLine={{ stroke: "#c3c2b7" }}
+                axisLine={{ stroke: "#94A3B8" }}
               />
-              <YAxis stroke="#898781" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+              <YAxis stroke="#5E7A8A" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Line
                 type="monotone"

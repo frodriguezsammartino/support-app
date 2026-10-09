@@ -20,7 +20,7 @@ export function TicketAdminControls({
     <Card>
       <CardContent className="flex flex-wrap items-center gap-4 py-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-zinc-500">Estado:</span>
+          <span className="text-ink-muted">Estado:</span>
           <StatusQuickEditor
             ticketId={ticket.id}
             title={ticket.title}
@@ -30,11 +30,11 @@ export function TicketAdminControls({
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-zinc-500">Urgencia:</span>
+          <span className="text-ink-muted">Urgencia:</span>
           <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-zinc-500">Categoría:</span>
+          <span className="text-ink-muted">Categoría:</span>
           <CategoryQuickEditor ticketId={ticket.id} categoryId={ticket.categoryId} categories={categories} />
         </div>
       </CardContent>

@@ -163,7 +163,7 @@ export function NewInternalTicketDialog({
               value={form.createdAt}
               onChange={(e) => update("createdAt", e.target.value)}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-ink-muted">
               Si lo dejás vacío se usa la fecha y hora de ahora. Sirve para cargar después algo
               que viste antes.
             </p>

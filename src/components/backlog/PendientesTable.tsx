@@ -27,6 +27,16 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  DesktopTable,
+  EmptyRecords,
+  MobileRecords,
+  RecordActions,
+  RecordCard,
+  RecordField,
+  RecordFields,
+  RecordTop,
+} from "@/components/ui/record-list";
 import type { Category, Ticket, TicketStatus } from "@prisma/client";
 
 type TicketRow = Ticket & { category: Category | null };
@@ -99,7 +109,7 @@ export function PendientesTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Categoría</span>
+          <span className="text-xs text-ink-muted">Categoría</span>
           <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
               <SelectValue>
@@ -118,7 +128,7 @@ export function PendientesTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Reportado por</span>
+          <span className="text-xs text-ink-muted">Reportado por</span>
           <Select value={reporterFilter} onValueChange={(v) => v && setReporterFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
               <SelectValue>{(v: string) => (v === "ALL" ? "Todos" : v)}</SelectValue>
@@ -135,7 +145,7 @@ export function PendientesTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Estado</span>
+          <span className="text-xs text-ink-muted">Estado</span>
           <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
             <SelectTrigger size="sm" className="w-40">
               <SelectValue>
@@ -151,7 +161,7 @@ export function PendientesTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Urgencia</span>
+          <span className="text-xs text-ink-muted">Urgencia</span>
           <Select value={priorityFilter} onValueChange={(v) => v && setPriorityFilter(v)}>
             <SelectTrigger size="sm" className="w-40">
               <SelectValue placeholder="Todas">
@@ -170,7 +180,7 @@ export function PendientesTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Ordenar por</span>
+          <span className="text-xs text-ink-muted">Ordenar por</span>
           <div className="flex gap-1">
             <Select value={sort.field} onValueChange={(v) => v && setSort((s) => ({ ...s, field: v as SortField }))}>
               <SelectTrigger size="sm" className="w-52">
@@ -195,81 +205,145 @@ export function PendientesTable({
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Ticket</TableHead>
-                <TableHead>Reportado por</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Urgencia</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Tiempo en espera</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRows.length === 0 && (
+      <MobileRecords>
+        {visibleRows.length === 0 && (
+          <EmptyRecords>No hay incidentes que coincidan con estos filtros.</EmptyRecords>
+        )}
+
+        {visibleRows.map((ticket) => (
+          <RecordCard
+            key={ticket.id}
+            className={ticket.status === "IN_PROGRESS" ? "border-brand/30 bg-brand-tint/30" : ""}
+          >
+            <RecordTop>
+              <Link href={`/admin/tickets/${ticket.id}`} className="min-w-0 font-medium text-ink">
+                <span className="text-slate-400">#{ticket.number}</span> {ticket.title}
+              </Link>
+              <StatusQuickEditor
+                ticketId={ticket.id}
+                title={ticket.title}
+                status={ticket.status}
+                categories={categories}
+                onChanged={(newStatus) => {
+                  setRows((prev) => {
+                    if (newStatus === "COMPLETED") return prev.filter((t) => t.id !== ticket.id);
+                    return prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t));
+                  });
+                }}
+              />
+            </RecordTop>
+
+            <RecordFields>
+              <RecordField label="Reportado por">{ticket.reporterName}</RecordField>
+              <RecordField label="Categoría">
+                <CategoryQuickEditor
+                  ticketId={ticket.id}
+                  categoryId={ticket.categoryId}
+                  categories={categories}
+                />
+              </RecordField>
+              <RecordField label="Urgencia">
+                <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
+              </RecordField>
+              <RecordField label="En espera">
+                hace {formatDistanceToNow(ticket.createdAt, { locale: es })}
+              </RecordField>
+            </RecordFields>
+
+            <RecordActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDelete(ticket)}
+                className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+              >
+                <Trash2 className="size-4" />
+                Eliminar
+              </Button>
+            </RecordActions>
+          </RecordCard>
+        ))}
+      </MobileRecords>
+
+      <DesktopTable>
+        <Card className="py-0">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-sm text-zinc-500">
-                    No hay incidentes que coincidan con estos filtros.
-                  </TableCell>
+                  <TableHead>#</TableHead>
+                  <TableHead>Ticket</TableHead>
+                  <TableHead>Reportado por</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Urgencia</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Tiempo en espera</TableHead>
+                  <TableHead />
                 </TableRow>
-              )}
-              {visibleRows.map((ticket) => (
-                <TableRow
-                  key={ticket.id}
-                  className={ticket.status === "IN_PROGRESS" ? "bg-blue-50/60 hover:bg-blue-50" : undefined}
-                >
-                  <TableCell className="text-zinc-500">#{ticket.number}</TableCell>
-                  <TableCell>
-                    <Link href={`/admin/tickets/${ticket.id}`} className="font-medium hover:underline">
-                      {ticket.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-zinc-600">{ticket.reporterName}</TableCell>
-                  <TableCell>
-                    <CategoryQuickEditor ticketId={ticket.id} categoryId={ticket.categoryId} categories={categories} />
-                  </TableCell>
-                  <TableCell>
-                    <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusQuickEditor
-                      ticketId={ticket.id}
-                      title={ticket.title}
-                      status={ticket.status}
-                      categories={categories}
-                      onChanged={(newStatus) => {
-                        setRows((prev) => {
-                          if (newStatus === "COMPLETED") return prev.filter((t) => t.id !== ticket.id);
-                          return prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t));
-                        });
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className="text-zinc-600">
-                    hace {formatDistanceToNow(ticket.createdAt, { locale: es })}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleDelete(ticket)}
-                      className="text-zinc-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {visibleRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-8 text-center text-sm text-ink-muted">
+                      No hay incidentes que coincidan con estos filtros.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {visibleRows.map((ticket) => (
+                  <TableRow
+                    key={ticket.id}
+                    className={ticket.status === "IN_PROGRESS" ? "bg-brand-tint/50 hover:bg-brand-tint" : undefined}
+                  >
+                    <TableCell className="text-slate-400">#{ticket.number}</TableCell>
+                    <TableCell>
+                      <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-ink hover:underline">
+                        {ticket.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-ink-muted">{ticket.reporterName}</TableCell>
+                    <TableCell>
+                      <CategoryQuickEditor ticketId={ticket.id} categoryId={ticket.categoryId} categories={categories} />
+                    </TableCell>
+                    <TableCell>
+                      <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusQuickEditor
+                        ticketId={ticket.id}
+                        title={ticket.title}
+                        status={ticket.status}
+                        categories={categories}
+                        onChanged={(newStatus) => {
+                          setRows((prev) => {
+                            if (newStatus === "COMPLETED") return prev.filter((t) => t.id !== ticket.id);
+                            return prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t));
+                          });
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="text-ink-muted">
+                      hace {formatDistanceToNow(ticket.createdAt, { locale: es })}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        title="Eliminar"
+                        onClick={() => handleDelete(ticket)}
+                        className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </DesktopTable>
     </div>
   );
 }

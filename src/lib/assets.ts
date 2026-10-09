@@ -1,3 +1,5 @@
+import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
+
 export type AssetType =
   | "PC"
   | "NOTEBOOK"
@@ -48,21 +50,9 @@ export const ASSET_STATUS_META: Record<
   AssetStatus,
   { label: string; badgeClass: string; rowClass: string }
 > = {
-  ACTIVE: {
-    label: "En uso",
-    badgeClass: "bg-[#0ca30c] text-white border-transparent",
-    rowClass: "",
-  },
-  REPAIR: {
-    label: "En reparación",
-    badgeClass: "bg-[#fab219] text-black border-transparent",
-    rowClass: "bg-amber-50/70 hover:bg-amber-50",
-  },
-  RETIRED: {
-    label: "De baja",
-    badgeClass: "bg-zinc-500 text-white border-transparent",
-    rowClass: "opacity-60",
-  },
+  ACTIVE: { label: "En uso", badgeClass: PILL.success, rowClass: "" },
+  REPAIR: { label: "En reparación", badgeClass: PILL.warning, rowClass: ROW_TINT.warning },
+  RETIRED: { label: "De baja", badgeClass: PILL.neutral, rowClass: ROW_TINT.muted },
 };
 
 export const ASSET_STATUS_ORDER: AssetStatus[] = ["ACTIVE", "REPAIR", "RETIRED"];
@@ -73,10 +63,10 @@ export type WarrantyState = "NONE" | "VALID" | "EXPIRING" | "EXPIRED";
 export const WARRANTY_WARN_DAYS = 60;
 
 export const WARRANTY_META: Record<WarrantyState, { label: string; className: string }> = {
-  NONE: { label: "Sin dato", className: "text-zinc-400" },
-  VALID: { label: "Vigente", className: "text-zinc-600" },
-  EXPIRING: { label: "Por vencer", className: "text-amber-700 font-medium" },
-  EXPIRED: { label: "Vencida", className: "text-zinc-500" },
+  NONE: { label: "Sin dato", className: "text-ink-muted/70" },
+  VALID: { label: "Vigente", className: "text-ink-muted" },
+  EXPIRING: { label: "Por vencer", className: STATE_TEXT.warning },
+  EXPIRED: { label: "Vencida", className: STATE_TEXT.muted },
 };
 
 export function getWarrantyState(warrantyUntil: Date | null): WarrantyState {

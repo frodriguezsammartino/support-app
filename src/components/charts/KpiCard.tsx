@@ -1,12 +1,8 @@
-import { Card, CardContent } from "@/components/ui/card";
-
 export function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
-      <CardContent className="py-4">
-        <p className="text-sm text-[#898781]">{label}</p>
-        <p className="text-2xl font-semibold text-[#0b0b0b]">{value}</p>
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border border-line bg-white px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
+    </div>
   );
 }

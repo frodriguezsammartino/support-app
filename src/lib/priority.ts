@@ -1,3 +1,4 @@
+import { PILL } from "./pills";
 import type { TicketPriority } from "@prisma/client";
 
 export const PRIORITY_META: Record<
@@ -7,26 +8,26 @@ export const PRIORITY_META: Record<
   LOW: {
     label: "Baja",
     description: "Puede esperar, no afecta el trabajo diario",
-    badgeClass: "bg-[#0ca30c] text-white border-transparent",
-    dot: "bg-[#0ca30c]",
+    badgeClass: PILL.success,
+    dot: "bg-[#166534]",
   },
   MEDIUM: {
     label: "Media",
     description: "Conviene resolverlo pronto, pero no es urgente",
-    badgeClass: "bg-[#fab219] text-black border-transparent",
-    dot: "bg-[#fab219]",
+    badgeClass: PILL.warning,
+    dot: "bg-[#92400E]",
   },
   HIGH: {
     label: "Alta",
     description: "Afecta el trabajo, hay que resolverlo hoy",
-    badgeClass: "bg-[#ec835a] text-black border-transparent",
-    dot: "bg-[#ec835a]",
+    badgeClass: PILL.danger,
+    dot: "bg-[#991B1B]",
   },
   URGENT: {
     label: "Urgente",
     description: "Necesito ayuda ya, está frenando la atención",
-    badgeClass: "bg-[#d03b3b] text-white border-transparent",
-    dot: "bg-[#d03b3b]",
+    badgeClass: PILL.dangerStrong,
+    dot: "bg-[#7F1D1D]",
   },
 };
 
@@ -46,7 +47,13 @@ export const STATUS_LABELS = {
 } as const;
 
 export const STATUS_DOT: Record<keyof typeof STATUS_LABELS, string> = {
-  BACKLOG: "bg-zinc-400",
-  IN_PROGRESS: "bg-blue-600",
-  COMPLETED: "bg-zinc-900",
+  BACKLOG: "bg-[#334155]",
+  IN_PROGRESS: "bg-brand",
+  COMPLETED: "bg-[#166534]",
+};
+
+export const STATUS_PILL: Record<keyof typeof STATUS_LABELS, string> = {
+  BACKLOG: PILL.neutral,
+  IN_PROGRESS: PILL.brand,
+  COMPLETED: PILL.success,
 };

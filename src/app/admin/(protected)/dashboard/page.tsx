@@ -89,7 +89,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
         <DashboardFilters categories={categories} />
       </div>
 
-      <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">Tickets</h2>
+      <h2 className="text-sm font-medium uppercase tracking-wide text-ink-muted">Tickets</h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Total de tickets" value={String(kpis.total)} />
@@ -110,7 +110,7 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
         <KpiCard label="Espera del ticket más viejo" value={formatHours(oldestOpenHours)} />
       </div>
 
-      <h2 className="mt-2 text-sm font-medium uppercase tracking-wide text-zinc-500">
+      <h2 className="mt-2 text-sm font-medium uppercase tracking-wide text-ink-muted">
         Mantenimiento e inventario
       </h2>
 

@@ -1,3 +1,5 @@
+import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
+
 export const DUE_SOON_RATIO = 0.2;
 export const HOUR_MS = 3_600_000;
 
@@ -19,31 +21,31 @@ export const MAINTENANCE_STATUS_META: Record<
 > = {
   OK: {
     label: "Al día",
-    badgeClass: "bg-[#0ca30c] text-white border-transparent",
-    dot: "bg-[#0ca30c]",
+    badgeClass: PILL.success,
+    dot: "bg-[#166534]",
     rowClass: "",
-    textClass: "text-zinc-600",
+    textClass: "text-ink-muted",
   },
   DUE_SOON: {
     label: "Vence pronto",
-    badgeClass: "bg-[#fab219] text-black border-transparent",
-    dot: "bg-[#fab219]",
-    rowClass: "bg-amber-50/70 hover:bg-amber-50",
-    textClass: "text-amber-700 font-medium",
+    badgeClass: PILL.warning,
+    dot: "bg-[#92400E]",
+    rowClass: ROW_TINT.warning,
+    textClass: STATE_TEXT.warning,
   },
   OVERDUE: {
     label: "Vencida",
-    badgeClass: "bg-[#d03b3b] text-white border-transparent",
-    dot: "bg-[#d03b3b]",
-    rowClass: "bg-red-50/70 hover:bg-red-50",
-    textClass: "text-red-700 font-medium",
+    badgeClass: PILL.danger,
+    dot: "bg-[#991B1B]",
+    rowClass: ROW_TINT.danger,
+    textClass: STATE_TEXT.danger,
   },
   FINISHED: {
     label: "Terminada",
-    badgeClass: "bg-zinc-500 text-white border-transparent",
-    dot: "bg-zinc-400",
-    rowClass: "opacity-60",
-    textClass: "text-zinc-500",
+    badgeClass: PILL.neutral,
+    dot: "bg-[#334155]",
+    rowClass: ROW_TINT.muted,
+    textClass: STATE_TEXT.muted,
   },
 };
 

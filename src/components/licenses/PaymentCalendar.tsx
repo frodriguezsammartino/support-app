@@ -22,7 +22,7 @@ export function PaymentCalendar({ months }: { months: MonthBucket[] }) {
           <CardTitle className="text-base">Pagos de los próximos 12 meses</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-ink-muted">
             Para ver cuándo cae cada factura, cargale a las licencias el costo y la fecha de
             vencimiento o renovación.
           </p>
@@ -35,7 +35,7 @@ export function PaymentCalendar({ months }: { months: MonthBucket[] }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CalendarDays className="size-5 text-blue-600" />
+          <CalendarDays className="size-5 text-brand" />
           <CardTitle className="text-base">Pagos de los próximos 12 meses</CardTitle>
         </div>
       </CardHeader>
@@ -54,27 +54,27 @@ export function PaymentCalendar({ months }: { months: MonthBucket[] }) {
           </TableHeader>
           <TableBody>
             {months.map((month, index) => (
-              <TableRow key={month.key} className={index === 0 ? "bg-blue-50/60" : undefined}>
+              <TableRow key={month.key} className={index === 0 ? "bg-brand-tint/50" : undefined}>
                 <TableCell className="align-top">
                   <span className="font-medium capitalize">{month.label}</span>
                   {index === 0 && (
-                    <span className="ml-2 text-xs text-blue-700">este mes</span>
+                    <span className="ml-2 text-xs text-brand">este mes</span>
                   )}
                 </TableCell>
 
                 <TableCell className="align-top">
                   {month.payments.length === 0 ? (
-                    <span className="text-sm text-zinc-400">—</span>
+                    <span className="text-sm text-slate-400">—</span>
                   ) : (
                     <div className="flex flex-col gap-0.5">
                       {month.payments.map((payment, i) => (
-                        <span key={`${payment.licenseId}-${i}`} className="text-sm text-zinc-700">
-                          <span className="text-zinc-400">
+                        <span key={`${payment.licenseId}-${i}`} className="text-sm text-ink">
+                          <span className="text-slate-400">
                             {String(payment.date.getUTCDate()).padStart(2, "0")}/
                             {String(payment.date.getUTCMonth() + 1).padStart(2, "0")}
                           </span>{" "}
                           {payment.licenseName}
-                          <span className="ml-1 text-xs text-zinc-400">
+                          <span className="ml-1 text-xs text-slate-400">
                             {formatMoney(payment.cents, payment.currency)}
                           </span>
                         </span>
@@ -90,7 +90,7 @@ export function PaymentCalendar({ months }: { months: MonthBucket[] }) {
                         {formatMoney(month.totals[currency], currency)}
                       </span>
                     ) : (
-                      <span className="text-zinc-300">—</span>
+                      <span className="text-slate-300">—</span>
                     )}
                   </TableCell>
                 ))}

@@ -35,7 +35,7 @@ export function DashboardFilters({ categories }: { categories: { id: string; nam
   return (
     <div className="flex flex-wrap gap-3">
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-500">Período</span>
+        <span className="text-xs text-ink-muted">Período</span>
         <Select value={range} onValueChange={(v) => v && update("range", v)}>
           <SelectTrigger size="sm" className="w-44">
             <SelectValue>{(v: string) => RANGE_LABELS[v] ?? RANGE_LABELS.all}</SelectValue>
@@ -51,7 +51,7 @@ export function DashboardFilters({ categories }: { categories: { id: string; nam
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-500">Categoría</span>
+        <span className="text-xs text-ink-muted">Categoría</span>
         <Select value={categoryId} onValueChange={(v) => v && update("categoryId", v)}>
           <SelectTrigger size="sm" className="w-48">
             <SelectValue placeholder="Todas">

@@ -42,7 +42,7 @@ export default async function MaintenanceTaskDetailPage(
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <Link
         href="/admin/mantenimiento"
-        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900"
+        className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
       >
         <ArrowLeft className="size-4" />
         Volver a Mantenimiento
@@ -57,37 +57,37 @@ export default async function MaintenanceTaskDetailPage(
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {task.description && (
-            <p className="whitespace-pre-wrap text-sm text-zinc-700">{task.description}</p>
+            <p className="whitespace-pre-wrap text-sm text-ink">{task.description}</p>
           )}
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Se repite</p>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-ink-muted">Se repite</p>
               <p className="text-sm font-medium">{describeRecurrence(task)}</p>
             </div>
-            <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Última vez</p>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-ink-muted">Última vez</p>
               {task.lastCompletedAt ? (
                 <>
                   <p className="text-sm font-medium">
                     hace {formatDistanceToNow(task.lastCompletedAt, { locale: es })}
                   </p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-slate-400">
                     {format(task.lastCompletedAt, "dd/MM/yyyy HH:mm")}
                   </p>
                 </>
               ) : (
-                <p className="text-sm text-zinc-400">Nunca</p>
+                <p className="text-sm text-slate-400">Nunca</p>
               )}
             </div>
-            <div className="rounded-lg border bg-zinc-50/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Próxima</p>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-ink-muted">Próxima</p>
               <p className={`text-sm ${meta.textClass}`}>
                 {row.status === "OVERDUE"
                   ? `venció hace ${formatDistanceToNow(row.nextDueAt, { locale: es })}`
                   : `en ${formatDistanceToNow(row.nextDueAt, { locale: es })}`}
               </p>
-              <p className="text-xs text-zinc-400">{format(row.nextDueAt, "dd/MM/yyyy HH:mm")}</p>
+              <p className="text-xs text-slate-400">{format(row.nextDueAt, "dd/MM/yyyy HH:mm")}</p>
             </div>
           </div>
 
@@ -108,7 +108,7 @@ export default async function MaintenanceTaskDetailPage(
         <CardHeader>
           <CardTitle className="text-base">
             Historial
-            <span className="ml-2 text-sm font-normal text-zinc-500">
+            <span className="ml-2 text-sm font-normal text-ink-muted">
               {task.completions.length} registro{task.completions.length === 1 ? "" : "s"}
             </span>
           </CardTitle>
@@ -117,7 +117,7 @@ export default async function MaintenanceTaskDetailPage(
           <MaintenanceNoteForm taskId={task.id} />
 
           {task.completions.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-ink-muted">
               Todavía no hay nada registrado para esta tarea.
             </p>
           )}
@@ -132,7 +132,7 @@ export default async function MaintenanceTaskDetailPage(
                 <div className="flex flex-col items-center">
                   <span
                     className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ${
-                      isDone ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                      isDone ? "bg-[#DCFCE7] text-[#166534]" : "bg-slate-100 text-ink-muted"
                     }`}
                   >
                     {isDone ? (
@@ -142,21 +142,21 @@ export default async function MaintenanceTaskDetailPage(
                     )}
                   </span>
                   {index < task.completions.length - 1 && (
-                    <span className="w-px flex-1 bg-zinc-200" />
+                    <span className="w-px flex-1 bg-slate-200" />
                   )}
                 </div>
                 <div className={index < task.completions.length - 1 ? "pb-5" : ""}>
                   <p className="text-sm font-medium leading-tight">
                     {isDone ? "Se hizo" : "Observación"}
-                    <span className="ml-2 font-normal text-zinc-500">
+                    <span className="ml-2 font-normal text-ink-muted">
                       {format(entry.completedAt, "dd/MM/yyyy HH:mm")}
                     </span>
-                    <span className="ml-2 text-xs font-normal text-zinc-400">
+                    <span className="ml-2 text-xs font-normal text-slate-400">
                       hace {formatDistanceToNow(entry.completedAt, { locale: es })}
                     </span>
                   </p>
-                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-zinc-600">
-                    {entry.note || <span className="text-zinc-400">Sin nota.</span>}
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm text-ink-muted">
+                    {entry.note || <span className="text-slate-400">Sin nota.</span>}
                   </p>
                 </div>
               </div>

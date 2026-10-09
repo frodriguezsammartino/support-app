@@ -33,6 +33,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DesktopTable,
+  EmptyRecords,
+  MobileRecords,
+  RecordActions,
+  RecordCard,
+  RecordField,
+  RecordFields,
+  RecordTop,
+} from "@/components/ui/record-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +81,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Buscar</span>
+          <span className="text-xs text-ink-muted">Buscar</span>
           <Input
             className="h-9 w-56"
             placeholder="Nombre o proveedor..."
@@ -80,7 +90,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Estado</span>
+          <span className="text-xs text-ink-muted">Estado</span>
           <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
               <SelectValue>
@@ -99,142 +109,247 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-14">#</TableHead>
-                <TableHead>Licencia</TableHead>
-                <TableHead className="w-56">Puestos</TableHead>
-                <TableHead className="w-44">Costo</TableHead>
-                <TableHead className="w-48">Vence / se renueva</TableHead>
-                <TableHead className="w-32">Estado</TableHead>
-                <TableHead className="w-24" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.length === 0 && (
+      <MobileRecords>
+        {visible.length === 0 && (
+          <EmptyRecords>
+            {licenses.length === 0
+              ? "Todavía no cargaste ninguna licencia."
+              : "Ninguna licencia coincide con estos filtros."}
+          </EmptyRecords>
+        )}
+
+        {visible.map((license) => {
+          const statusMeta = LICENSE_STATUS_META[license.status];
+          const alertMeta = ALERT_META[getLicenseAlert(license)];
+          const available = license.seatsTotal - license.seatsAssigned;
+          return (
+            <RecordCard key={license.id} className={statusMeta.rowClass}>
+              <RecordTop>
+                <span className="min-w-0 font-medium text-ink">
+                  <span className="text-slate-400">#{license.code}</span> {license.name}
+                </span>
+                <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
+              </RecordTop>
+              {license.vendor && <p className="mt-0.5 text-xs text-ink-muted">{license.vendor}</p>}
+
+              <RecordFields>
+                <RecordField label="Puestos">
+                  <span className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Liberar un puesto"
+                      disabled={isPending || license.seatsAssigned === 0}
+                      onClick={() => run(() => adjustAssignedSeats(license.id, -1))}
+                    >
+                      <Minus className="size-3.5" />
+                    </Button>
+                    <span className="tabular-nums">
+                      {license.seatsAssigned} / {license.seatsTotal}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Asignar un puesto"
+                      disabled={isPending}
+                      onClick={() => run(() => adjustAssignedSeats(license.id, 1))}
+                    >
+                      <Plus className="size-3.5" />
+                    </Button>
+                  </span>
+                  <span
+                    className={`block text-xs ${
+                      available < 0 ? "font-medium text-[#991B1B]" : "text-ink-muted"
+                    }`}
+                  >
+                    {available < 0
+                      ? `${Math.abs(available)} de más en uso`
+                      : `${available} disponible${available === 1 ? "" : "s"}`}
+                  </span>
+                </RecordField>
+
+                <RecordField label="Costo">
+                  {formatMoney(license.costCents, license.currency)}
+                  <span className="block text-xs text-slate-400">
+                    {BILLING_LABELS[license.billing as LicenseBilling]}
+                  </span>
+                </RecordField>
+
+                <RecordField label="Vence">
+                  <span className={`flex items-center justify-end gap-1.5 ${alertMeta.className}`}>
+                    {license.autoRenew && <RefreshCw className="size-3.5" />}
+                    {alertMeta.label}
+                  </span>
+                  {license.expiresAt && (
+                    <span className="block text-xs text-slate-400">
+                      {format(license.expiresAt, "dd/MM/yyyy")}
+                    </span>
+                  )}
+                </RecordField>
+              </RecordFields>
+
+              <RecordActions>
+                <EditLicenseDialog license={license} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
+                    run(() => deleteLicense(license.id));
+                  }}
+                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                >
+                  <Trash2 className="size-4" />
+                  Eliminar
+                </Button>
+              </RecordActions>
+            </RecordCard>
+          );
+        })}
+      </MobileRecords>
+
+      <DesktopTable>
+        <Card className="py-0">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
-                    {licenses.length === 0
-                      ? "Todavía no cargaste ninguna licencia."
-                      : "Ninguna licencia coincide con estos filtros."}
-                  </TableCell>
+                  <TableHead className="w-14">#</TableHead>
+                  <TableHead>Licencia</TableHead>
+                  <TableHead className="w-56">Puestos</TableHead>
+                  <TableHead className="w-44">Costo</TableHead>
+                  <TableHead className="w-48">Vence / se renueva</TableHead>
+                  <TableHead className="w-32">Estado</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              )}
-
-              {visible.map((license) => {
-                const statusMeta = LICENSE_STATUS_META[license.status];
-                const alertMeta = ALERT_META[getLicenseAlert(license)];
-                const available = license.seatsTotal - license.seatsAssigned;
-                return (
-                  <TableRow key={license.id} className={statusMeta.rowClass}>
-                    <TableCell className="text-zinc-500">#{license.code}</TableCell>
-
-                    <TableCell>
-                      <span className="font-medium">{license.name}</span>
-                      {license.vendor && (
-                        <p className="mt-0.5 text-xs text-zinc-500">{license.vendor}</p>
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Liberar un puesto"
-                          disabled={isPending || license.seatsAssigned === 0}
-                          onClick={() => run(() => adjustAssignedSeats(license.id, -1))}
-                        >
-                          <Minus className="size-3.5" />
-                        </Button>
-                        <span className="text-sm tabular-nums">
-                          {license.seatsAssigned} / {license.seatsTotal}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Asignar un puesto"
-                          disabled={isPending}
-                          onClick={() => run(() => adjustAssignedSeats(license.id, 1))}
-                        >
-                          <Plus className="size-3.5" />
-                        </Button>
-                      </div>
-                      <p
-                        className={`mt-0.5 text-xs ${
-                          available < 0
-                            ? "font-medium text-red-700"
-                            : available === 0
-                              ? "text-amber-700"
-                              : "text-zinc-500"
-                        }`}
-                      >
-                        {available < 0
-                          ? `${Math.abs(available)} de más en uso`
-                          : `${available} disponible${available === 1 ? "" : "s"}`}
-                      </p>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-zinc-700">
-                          {formatMoney(license.costCents, license.currency)}
-                        </span>
-                        <span className="text-xs text-zinc-400">
-                          {BILLING_LABELS[license.billing as LicenseBilling]}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex flex-col leading-tight">
-                        <span className={`flex items-center gap-1.5 ${alertMeta.className}`}>
-                          {license.autoRenew && <RefreshCw className="size-3.5" />}
-                          {alertMeta.label}
-                        </span>
-                        {license.expiresAt && (
-                          <span className="text-xs text-zinc-400">
-                            {format(license.expiresAt, "dd/MM/yyyy")}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <EditLicenseDialog license={license} />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Eliminar"
-                          disabled={isPending}
-                          onClick={() => {
-                            if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
-                            run(() => deleteLicense(license.id));
-                          }}
-                          className="text-zinc-400 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {visible.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-sm text-ink-muted">
+                      {licenses.length === 0
+                        ? "Todavía no cargaste ninguna licencia."
+                        : "Ninguna licencia coincide con estos filtros."}
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                )}
+
+                {visible.map((license) => {
+                  const statusMeta = LICENSE_STATUS_META[license.status];
+                  const alertMeta = ALERT_META[getLicenseAlert(license)];
+                  const available = license.seatsTotal - license.seatsAssigned;
+                  return (
+                    <TableRow key={license.id} className={statusMeta.rowClass}>
+                      <TableCell className="text-slate-400">#{license.code}</TableCell>
+
+                      <TableCell>
+                        <span className="font-medium">{license.name}</span>
+                        {license.vendor && (
+                          <p className="mt-0.5 text-xs text-ink-muted">{license.vendor}</p>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Liberar un puesto"
+                            disabled={isPending || license.seatsAssigned === 0}
+                            onClick={() => run(() => adjustAssignedSeats(license.id, -1))}
+                          >
+                            <Minus className="size-3.5" />
+                          </Button>
+                          <span className="text-sm tabular-nums">
+                            {license.seatsAssigned} / {license.seatsTotal}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Asignar un puesto"
+                            disabled={isPending}
+                            onClick={() => run(() => adjustAssignedSeats(license.id, 1))}
+                          >
+                            <Plus className="size-3.5" />
+                          </Button>
+                        </div>
+                        <p
+                          className={`mt-0.5 text-xs ${
+                            available < 0
+                              ? "font-medium text-[#991B1B]"
+                              : available === 0
+                                ? "text-[#92400E]"
+                                : "text-ink-muted"
+                          }`}
+                        >
+                          {available < 0
+                            ? `${Math.abs(available)} de más en uso`
+                            : `${available} disponible${available === 1 ? "" : "s"}`}
+                        </p>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-ink">
+                            {formatMoney(license.costCents, license.currency)}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {BILLING_LABELS[license.billing as LicenseBilling]}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-col leading-tight">
+                          <span className={`flex items-center gap-1.5 ${alertMeta.className}`}>
+                            {license.autoRenew && <RefreshCw className="size-3.5" />}
+                            {alertMeta.label}
+                          </span>
+                          {license.expiresAt && (
+                            <span className="text-xs text-slate-400">
+                              {format(license.expiresAt, "dd/MM/yyyy")}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <EditLicenseDialog license={license} />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Eliminar"
+                            disabled={isPending}
+                            onClick={() => {
+                              if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
+                              run(() => deleteLicense(license.id));
+                            }}
+                            className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </DesktopTable>
     </div>
   );
 }

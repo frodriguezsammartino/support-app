@@ -24,6 +24,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DesktopTable,
+  EmptyRecords,
+  MobileRecords,
+  RecordActions,
+  RecordCard,
+  RecordField,
+  RecordFields,
+  RecordTop,
+} from "@/components/ui/record-list";
 import { Button } from "@/components/ui/button";
 import type { Category, Ticket } from "@prisma/client";
 
@@ -68,7 +78,7 @@ export function HistorialTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Categoría</span>
+          <span className="text-xs text-ink-muted">Categoría</span>
           <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
               <SelectValue>
@@ -87,7 +97,7 @@ export function HistorialTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Reportado por</span>
+          <span className="text-xs text-ink-muted">Reportado por</span>
           <Select value={reporterFilter} onValueChange={(v) => v && setReporterFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
               <SelectValue>{(v: string) => (v === "ALL" ? "Todos" : v)}</SelectValue>
@@ -104,7 +114,7 @@ export function HistorialTable({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-500">Resuelto</span>
+          <span className="text-xs text-ink-muted">Resuelto</span>
           <Button
             type="button"
             variant="outline"
@@ -125,76 +135,125 @@ export function HistorialTable({
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Ticket</TableHead>
-                <TableHead>Reportado por</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Urgencia</TableHead>
-                <TableHead>Resuelto</TableHead>
-                <TableHead>Duración total</TableHead>
-                <TableHead />
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRows.length === 0 && (
+      <MobileRecords>
+        {visibleRows.length === 0 && <EmptyRecords>Todavía no hay tickets cerrados.</EmptyRecords>}
+
+        {visibleRows.map((ticket) => (
+          <RecordCard key={ticket.id}>
+            <RecordTop>
+              <Link href={`/admin/tickets/${ticket.id}`} className="min-w-0 font-medium text-ink">
+                <span className="text-slate-400">#{ticket.number}</span> {ticket.title}
+              </Link>
+              <PriorityBadge priority={ticket.priority} />
+            </RecordTop>
+
+            <RecordFields>
+              <RecordField label="Reportado por">{ticket.reporterName}</RecordField>
+              <RecordField label="Categoría">{ticket.category?.name ?? "Sin categoría"}</RecordField>
+              <RecordField label="Resuelto">
+                {ticket.completedAt?.toLocaleDateString("es-AR") ?? "—"}
+              </RecordField>
+              <RecordField label="Duración total">
+                {ticket.completedAt
+                  ? formatDistanceStrict(ticket.createdAt, ticket.completedAt, { locale: es })
+                  : "—"}
+              </RecordField>
+            </RecordFields>
+
+            <RecordActions>
+              <ReopenControl
+                ticketId={ticket.id}
+                title={ticket.title}
+                categories={categories}
+                onReopened={() => setRows((prev) => prev.filter((t) => t.id !== ticket.id))}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDelete(ticket)}
+                className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+              >
+                <Trash2 className="size-4" />
+                Eliminar
+              </Button>
+            </RecordActions>
+          </RecordCard>
+        ))}
+      </MobileRecords>
+
+      <DesktopTable>
+        <Card className="py-0">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-sm text-zinc-500">
-                    Todavía no hay tickets cerrados.
-                  </TableCell>
+                  <TableHead>#</TableHead>
+                  <TableHead>Ticket</TableHead>
+                  <TableHead>Reportado por</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Urgencia</TableHead>
+                  <TableHead>Resuelto</TableHead>
+                  <TableHead>Duración total</TableHead>
+                  <TableHead />
+                  <TableHead />
                 </TableRow>
-              )}
-              {visibleRows.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="text-zinc-500">#{ticket.number}</TableCell>
-                  <TableCell>
-                    <Link href={`/admin/tickets/${ticket.id}`} className="font-medium hover:underline">
-                      {ticket.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-zinc-600">{ticket.reporterName}</TableCell>
-                  <TableCell className="text-zinc-600">{ticket.category?.name ?? "Sin categoría"}</TableCell>
-                  <TableCell>
-                    <PriorityBadge priority={ticket.priority} />
-                  </TableCell>
-                  <TableCell className="text-zinc-600">
-                    {ticket.completedAt?.toLocaleDateString("es-AR") ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600">
-                    {ticket.completedAt
-                      ? formatDistanceStrict(ticket.createdAt, ticket.completedAt, { locale: es })
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <ReopenControl
-                      ticketId={ticket.id}
-                      title={ticket.title}
-                      categories={categories}
-                      onReopened={() => setRows((prev) => prev.filter((t) => t.id !== ticket.id))}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleDelete(ticket)}
-                      className="text-zinc-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {visibleRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-8 text-center text-sm text-ink-muted">
+                      Todavía no hay tickets cerrados.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {visibleRows.map((ticket) => (
+                  <TableRow key={ticket.id}>
+                    <TableCell className="text-slate-400">#{ticket.number}</TableCell>
+                    <TableCell>
+                      <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-ink hover:underline">
+                        {ticket.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-ink-muted">{ticket.reporterName}</TableCell>
+                    <TableCell className="text-ink-muted">{ticket.category?.name ?? "Sin categoría"}</TableCell>
+                    <TableCell>
+                      <PriorityBadge priority={ticket.priority} />
+                    </TableCell>
+                    <TableCell className="text-ink-muted">
+                      {ticket.completedAt?.toLocaleDateString("es-AR") ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-ink-muted">
+                      {ticket.completedAt
+                        ? formatDistanceStrict(ticket.createdAt, ticket.completedAt, { locale: es })
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ReopenControl
+                        ticketId={ticket.id}
+                        title={ticket.title}
+                        categories={categories}
+                        onReopened={() => setRows((prev) => prev.filter((t) => t.id !== ticket.id))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => handleDelete(ticket)}
+                        className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </DesktopTable>
     </div>
   );
 }
