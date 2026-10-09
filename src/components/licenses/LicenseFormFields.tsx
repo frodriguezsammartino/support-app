@@ -2,6 +2,9 @@
 
 import {
   BILLING_LABELS,
+  KIND_HINTS,
+  KIND_LABELS,
+  KIND_ORDER,
   PRICING_HINTS,
   PRICING_LABELS,
   PRICING_ORDER,
@@ -14,6 +17,7 @@ import {
   LICENSE_STATUS_ORDER,
   type Currency,
   type LicenseBilling,
+  type LicenseKind,
   type LicensePricing,
   type LicenseStatus,
 } from "@/lib/licenses";
@@ -31,6 +35,7 @@ import {
 
 export type LicenseFormValues = {
   name: string;
+  kind: LicenseKind;
   vendor: string;
   seatsTotal: string;
   seatsAssigned: string;
@@ -46,6 +51,7 @@ export type LicenseFormValues = {
 
 export const EMPTY_LICENSE_FORM: LicenseFormValues = {
   name: "",
+  kind: "SOFTWARE",
   vendor: "",
   seatsTotal: "1",
   seatsAssigned: "0",
@@ -93,11 +99,40 @@ export function LicenseFormFields({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <Label>Licencia</Label>
+        <Label>¿Qué es?</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {KIND_ORDER.map((k) => {
+            const selected = values.kind === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onChange({ kind: k })}
+                className={`flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors ${
+                  selected
+                    ? "border-brand bg-brand-tint"
+                    : "border-slate-300 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <span className="text-sm font-medium text-ink">{KIND_LABELS[k]}</span>
+                <span className="text-xs leading-snug text-ink-muted">{KIND_HINTS[k]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Nombre</Label>
         <Input
           value={values.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Ej: Microsoft 365 Business Standard"
+          placeholder={
+            values.kind === "SERVICE"
+              ? "Ej: Internet fibra 300 megas"
+              : "Ej: Microsoft 365 Business Standard"
+          }
         />
       </div>
 

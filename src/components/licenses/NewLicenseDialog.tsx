@@ -41,15 +41,15 @@ export function NewLicenseDialog() {
         render={
           <Button size="sm">
             <Plus className="size-4" />
-            Nueva licencia
+            Nuevo
           </Button>
         }
       />
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Nueva licencia</DialogTitle>
+          <DialogTitle>Nueva licencia o servicio</DialogTitle>
           <DialogDescription>
-            Solo el nombre y los puestos son obligatorios. El resto lo podés completar después.
+            Una licencia de software o un servicio contratado: internet, telefonía, soporte.
           </DialogDescription>
         </DialogHeader>
 
@@ -66,12 +66,13 @@ export function NewLicenseDialog() {
             disabled={isPending}
             onClick={() => {
               if (values.name.trim().length < 2) {
-                toast.error("Ponele un nombre a la licencia.");
+                toast.error("Ponele un nombre.");
                 return;
               }
               startTransition(async () => {
                 const result = await createLicense({
                   name: values.name,
+                  kind: values.kind,
                   vendor: values.vendor,
                   seatsTotal: values.pricing === "UNLIMITED" ? 1 : Number(values.seatsTotal) || 1,
                   seatsAssigned:
@@ -91,12 +92,12 @@ export function NewLicenseDialog() {
                 }
                 setValues(EMPTY_LICENSE_FORM);
                 setOpen(false);
-                toast.success("Licencia agregada.");
+                toast.success("Agregado.");
                 router.refresh();
               });
             }}
           >
-            {isPending ? "Guardando..." : "Agregar licencia"}
+            {isPending ? "Guardando..." : "Agregar"}
           </Button>
         </DialogFooter>
       </DialogContent>

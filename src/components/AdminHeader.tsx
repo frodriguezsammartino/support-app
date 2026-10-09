@@ -23,7 +23,7 @@ type Section = { href: string; label: string; short: string; icon: LucideIcon };
 const SECTIONS: Section[] = [
   { href: "/admin", label: "Panel de Tareas", short: "Tareas", icon: Home },
   { href: "/admin/mantenimiento", label: "Panel de Mantenimiento", short: "Mantenimiento", icon: Wrench },
-  { href: "/admin/licencias", label: "Inventario de Licencias", short: "Licencias", icon: KeyRound },
+  { href: "/admin/licencias", label: "Licencias y Servicios", short: "Licencias", icon: KeyRound },
   { href: "/admin/equipos", label: "Inventario de Equipos", short: "Equipos", icon: Monitor },
   { href: "/admin/dashboard", label: "Dashboard", short: "Dashboard", icon: BarChart3 },
 ];

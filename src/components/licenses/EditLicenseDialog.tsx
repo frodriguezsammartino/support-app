@@ -10,6 +10,7 @@ import {
   parseMoneyToCents,
   type Currency,
   type LicenseBilling,
+  type LicenseKind,
   type LicensePricing,
   type LicenseStatus,
 } from "@/lib/licenses";
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/button";
 export type EditableLicense = {
   id: string;
   name: string;
+  kind: LicenseKind;
   vendor: string | null;
   seatsTotal: number;
   seatsAssigned: number;
@@ -49,6 +51,7 @@ export type EditableLicense = {
 function toFormValues(license: EditableLicense): LicenseFormValues {
   return {
     name: license.name,
+    kind: license.kind,
     vendor: license.vendor ?? "",
     seatsTotal: String(license.seatsTotal),
     seatsAssigned: String(license.seatsAssigned),
@@ -86,7 +89,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
       />
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Editar licencia</DialogTitle>
+          <DialogTitle>Editar</DialogTitle>
           <DialogDescription>{license.name}</DialogDescription>
         </DialogHeader>
 
@@ -103,12 +106,13 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
             disabled={isPending}
             onClick={() => {
               if (values.name.trim().length < 2) {
-                toast.error("Ponele un nombre a la licencia.");
+                toast.error("Ponele un nombre.");
                 return;
               }
               startTransition(async () => {
                 const result = await updateLicense(license.id, {
                   name: values.name,
+                  kind: values.kind,
                   vendor: values.vendor,
                   seatsTotal: values.pricing === "UNLIMITED" ? 1 : Number(values.seatsTotal) || 1,
                   seatsAssigned:

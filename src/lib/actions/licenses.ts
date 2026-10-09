@@ -4,12 +4,18 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
 import { createLicenseSchema, updateLicenseSchema } from "@/lib/validations";
-import type { LicenseBilling, LicensePricing, LicenseStatus } from "@/lib/licenses";
+import type {
+  LicenseBilling,
+  LicenseKind,
+  LicensePricing,
+  LicenseStatus,
+} from "@/lib/licenses";
 
 export type ActionResult = { error?: string };
 
 export type LicenseInput = {
   name: string;
+  kind: LicenseKind;
   vendor?: string | null;
   seatsTotal: number;
   seatsAssigned: number;
@@ -31,6 +37,7 @@ function revalidateLicenses() {
 function toLicenseData(data: LicenseInput) {
   return {
     name: data.name,
+    kind: data.kind,
     vendor: data.vendor || null,
     seatsTotal: data.seatsTotal,
     seatsAssigned: data.seatsAssigned,

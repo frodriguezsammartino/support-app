@@ -105,7 +105,7 @@ export function LicensesSummary({
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardContent className="flex h-full flex-col gap-3 py-4">
-          <CardTitleBlock title="Estado del inventario" subtitle={`${active} licencias activas`} />
+          <CardTitleBlock title="Licencias y servicios" subtitle={`${active} activas`} />
           <div className="flex flex-1 items-stretch gap-2">
             <TrafficItem
               value={active - expiring - expired}

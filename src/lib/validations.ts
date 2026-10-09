@@ -110,7 +110,8 @@ export const createAssetSchema = z.object({
 export const updateAssetSchema = createAssetSchema;
 
 export const createLicenseSchema = z.object({
-  name: z.string().trim().min(2, "Ponele un nombre a la licencia").max(120),
+  name: z.string().trim().min(2, "Ponele un nombre").max(120),
+  kind: z.enum(["SOFTWARE", "SERVICE", "SUPPORT", "OTHER"]),
   vendor: optionalText(80),
   seatsTotal: z.coerce.number().int().min(1, "Tiene que haber al menos 1 puesto").max(10000),
   // Se permite asignar mas puestos de los comprados: justamente eso hay que poder verlo.

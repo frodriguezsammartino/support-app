@@ -2,6 +2,32 @@ import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
 
 export type LicenseBilling = "MONTHLY" | "YEARLY" | "ONE_TIME";
 export type LicenseStatus = "ACTIVE" | "CANCELLED";
+export type LicenseKind = "SOFTWARE" | "SERVICE" | "SUPPORT" | "OTHER";
+
+export const KIND_LABELS: Record<LicenseKind, string> = {
+  SOFTWARE: "Licencia de software",
+  SERVICE: "Servicio",
+  SUPPORT: "Soporte contratado",
+  OTHER: "Otro",
+};
+
+/** Versión corta, para la fila de la tabla. */
+export const KIND_SHORT: Record<LicenseKind, string> = {
+  SOFTWARE: "Licencia",
+  SERVICE: "Servicio",
+  SUPPORT: "Soporte",
+  OTHER: "Otro",
+};
+
+export const KIND_HINTS: Record<LicenseKind, string> = {
+  SOFTWARE: "Office, antivirus, el sistema de la clínica.",
+  SERVICE: "Internet, telefonía, hosting, el dominio.",
+  SUPPORT: "Mantenimiento o soporte contratado a un tercero.",
+  OTHER: "Cualquier otro gasto fijo de sistemas.",
+};
+
+export const KIND_ORDER: LicenseKind[] = ["SOFTWARE", "SERVICE", "SUPPORT", "OTHER"];
+
 export type LicensePricing = "PER_SEAT" | "FLAT" | "UNLIMITED";
 
 export const PRICING_LABELS: Record<LicensePricing, string> = {

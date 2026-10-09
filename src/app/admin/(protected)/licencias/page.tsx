@@ -4,7 +4,10 @@ import {
   annualWastedCents,
   getLicenseAlert,
   getPaymentCalendar,
+  KIND_ORDER,
+  type LicenseKind,
 } from "@/lib/licenses";
+import { CostByKind, type KindTotals } from "@/components/licenses/CostByKind";
 import { LicensesSummary } from "@/components/licenses/LicensesSummary";
 import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTable";
 import { NewLicenseDialog } from "@/components/licenses/NewLicenseDialog";
@@ -17,6 +20,7 @@ export default async function LicenciasPage() {
     id: l.id,
     code: l.code,
     name: l.name,
+    kind: l.kind,
     vendor: l.vendor,
     seatsTotal: l.seatsTotal,
     seatsAssigned: l.seatsAssigned,
@@ -52,6 +56,17 @@ export default async function LicenciasPage() {
     return acc;
   }, {});
 
+  // Mismo gasto anual, abierto por tipo: licencias, servicios, soporte.
+  const annualByKind = KIND_ORDER.reduce((acc, kind) => {
+    acc[kind] = active
+      .filter((l) => l.kind === kind)
+      .reduce<Record<string, number>>((inner, l) => {
+        inner[l.currency] = (inner[l.currency] ?? 0) + annualCostCents(l);
+        return inner;
+      }, {});
+    return acc;
+  }, {} as KindTotals);
+
   const toRows = (totals: Record<string, number>) =>
     currencies.map((currency) => ({ currency, cents: totals[currency] ?? 0 }));
 
@@ -72,6 +87,7 @@ export default async function LicenciasPage() {
       />
 
       <LicensesTable licenses={rows} />
+      <CostByKind totals={annualByKind} currencies={currencies} />
       <PaymentCalendar months={calendar} />
     </div>
   );

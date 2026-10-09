@@ -9,6 +9,8 @@ import { adjustAssignedSeats, deleteLicense } from "@/lib/actions/licenses";
 import {
   ALERT_META,
   BILLING_LABELS,
+  KIND_ORDER,
+  KIND_SHORT,
   PRICING_LABELS,
   formatAmount,
   hasSeats,
@@ -18,6 +20,7 @@ import {
   LICENSE_STATUS_ORDER,
   getLicenseAlert,
   type LicenseBilling,
+  type LicenseKind,
   type LicenseStatus,
 } from "@/lib/licenses";
 import { EditLicenseDialog, type EditableLicense } from "./EditLicenseDialog";
@@ -58,17 +61,19 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
+  const [kindFilter, setKindFilter] = useState<string>("ALL");
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return licenses.filter((l) => {
       if (statusFilter !== "ALL" && l.status !== statusFilter) return false;
+      if (kindFilter !== "ALL" && l.kind !== kindFilter) return false;
       if (!needle) return true;
       return [l.name, l.vendor, `#${l.code}`]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(needle));
     });
-  }, [licenses, search, statusFilter]);
+  }, [licenses, search, statusFilter, kindFilter]);
 
   function run(action: () => Promise<{ error?: string }>) {
     startTransition(async () => {
@@ -94,6 +99,25 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
           />
         </div>
         <div className="flex flex-col gap-1">
+          <span className="text-xs text-ink-muted">Tipo</span>
+          <Select value={kindFilter} onValueChange={(v) => v && setKindFilter(v)}>
+            <SelectTrigger size="sm" className="w-44">
+              <SelectValue>
+                {(v: string) => (v === "ALL" ? "Todos" : KIND_SHORT[v as LicenseKind])}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos</SelectItem>
+              {KIND_ORDER.map((k) => (
+                <SelectItem key={k} value={k}>
+                  {KIND_SHORT[k]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Estado</span>
           <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
             <SelectTrigger size="sm" className="w-44">
@@ -117,8 +141,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
         {visible.length === 0 && (
           <EmptyRecords>
             {licenses.length === 0
-              ? "Todavía no cargaste ninguna licencia."
-              : "Ninguna licencia coincide con estos filtros."}
+              ? "Todavía no cargaste ninguna licencia ni servicio."
+              : "Nada coincide con estos filtros."}
           </EmptyRecords>
         )}
 
@@ -134,7 +158,10 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                 </span>
                 <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
               </RecordTop>
-              {license.vendor && <p className="mt-0.5 text-xs text-ink-muted">{license.vendor}</p>}
+              <p className="mt-0.5 text-xs text-ink-muted">
+                {KIND_SHORT[license.kind]}
+                {license.vendor && ` · ${license.vendor}`}
+              </p>
 
               <RecordFields>
                 <RecordField label="Puestos">
@@ -235,7 +262,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-14">#</TableHead>
-                  <TableHead>Licencia</TableHead>
+                  <TableHead>Licencia / servicio</TableHead>
                   <TableHead className="w-56">Puestos</TableHead>
                   <TableHead className="w-44">Costo</TableHead>
                   <TableHead className="w-48">Vence / se renueva</TableHead>
@@ -248,8 +275,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                   <TableRow>
                     <TableCell colSpan={7} className="py-8 text-center text-sm text-ink-muted">
                       {licenses.length === 0
-                        ? "Todavía no cargaste ninguna licencia."
-                        : "Ninguna licencia coincide con estos filtros."}
+                        ? "Todavía no cargaste ninguna licencia ni servicio."
+                        : "Nada coincide con estos filtros."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -264,9 +291,10 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
                       <TableCell>
                         <span className="font-medium">{license.name}</span>
-                        {license.vendor && (
-                          <p className="mt-0.5 text-xs text-ink-muted">{license.vendor}</p>
-                        )}
+                        <p className="mt-0.5 text-xs text-ink-muted">
+                          {KIND_SHORT[license.kind]}
+                          {license.vendor && ` · ${license.vendor}`}
+                        </p>
                       </TableCell>
 
                       <TableCell>

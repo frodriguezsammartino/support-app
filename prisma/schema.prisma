@@ -215,6 +215,18 @@ enum LicenseStatus {
   CANCELLED
 }
 
+/// Que clase de gasto es. Todo convive en la misma tabla para poder ver el
+/// total de IT de una sola vez, pero se puede filtrar y subtotalizar.
+enum LicenseKind {
+  /// Licencia de software.
+  SOFTWARE
+  /// Servicio contratado: internet, telefonia, hosting, dominio.
+  SERVICE
+  /// Soporte o mantenimiento contratado a un tercero.
+  SUPPORT
+  OTHER
+}
+
 enum LicensePricing {
   /// Se paga por cada puesto: un puesto sin usar es plata tirada.
   PER_SEAT
@@ -227,9 +239,10 @@ enum LicensePricing {
 /// Una licencia de software contratada: Office, antivirus, el dominio, etc.
 /// `seats` son los puestos: cuantos se pagan y cuantos estan asignados.
 model License {
-  id     String @id @default(cuid())
-  code   Int    @unique @default(autoincrement())
+  id     String      @id @default(cuid())
+  code   Int         @unique @default(autoincrement())
   name   String
+  kind   LicenseKind @default(SOFTWARE)
   vendor String?
 
   seatsTotal    Int @default(1)
