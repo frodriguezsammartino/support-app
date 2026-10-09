@@ -118,7 +118,7 @@ export const createLicenseSchema = z.object({
   costCents: z.coerce.number().int().min(0).nullable().optional(),
   currency: z.enum(["ARS", "USD"]),
   billing: z.enum(["MONTHLY", "YEARLY", "ONE_TIME"]),
-  pricing: z.enum(["PER_SEAT", "FLAT"]),
+  pricing: z.enum(["PER_SEAT", "FLAT", "UNLIMITED"]),
   expiresAt: z.coerce.date().nullable().optional(),
   autoRenew: z.coerce.boolean(),
   status: z.enum(["ACTIVE", "CANCELLED"]),

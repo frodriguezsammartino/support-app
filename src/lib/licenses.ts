@@ -2,19 +2,26 @@ import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
 
 export type LicenseBilling = "MONTHLY" | "YEARLY" | "ONE_TIME";
 export type LicenseStatus = "ACTIVE" | "CANCELLED";
-export type LicensePricing = "PER_SEAT" | "FLAT";
+export type LicensePricing = "PER_SEAT" | "FLAT" | "UNLIMITED";
 
 export const PRICING_LABELS: Record<LicensePricing, string> = {
   PER_SEAT: "Por puesto",
-  FLAT: "Precio fijo",
+  FLAT: "Paquete de puestos",
+  UNLIMITED: "Sin límite de usuarios",
 };
 
 export const PRICING_HINTS: Record<LicensePricing, string> = {
   PER_SEAT: "Se paga por cada puesto contratado. Un puesto sin usar es plata tirada.",
-  FLAT: "Precio cerrado del paquete. Usar menos puestos no cambia lo que se paga.",
+  FLAT: "Precio cerrado por una cantidad de puestos. Usar menos no cambia lo que se paga.",
+  UNLIMITED: "Se paga la suscripción y la usa quien haga falta. No hay puestos que contar.",
 };
 
-export const PRICING_ORDER: LicensePricing[] = ["PER_SEAT", "FLAT"];
+export const PRICING_ORDER: LicensePricing[] = ["PER_SEAT", "FLAT", "UNLIMITED"];
+
+/** Con suscripción abierta no hay puestos: no se piden ni se muestran. */
+export function hasSeats(pricing: LicensePricing) {
+  return pricing !== "UNLIMITED";
+}
 
 export const BILLING_LABELS: Record<LicenseBilling, string> = {
   MONTHLY: "Por mes",

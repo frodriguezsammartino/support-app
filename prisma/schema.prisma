@@ -218,8 +218,10 @@ enum LicenseStatus {
 enum LicensePricing {
   /// Se paga por cada puesto: un puesto sin usar es plata tirada.
   PER_SEAT
-  /// Precio cerrado por el paquete: sobran puestos pero no cuestan de mas.
+  /// Precio cerrado por un paquete de puestos: sobran pero no cuestan de mas.
   FLAT
+  /// Suscripcion sin limite de usuarios: no hay puestos que contar.
+  UNLIMITED
 }
 
 /// Una licencia de software contratada: Office, antivirus, el dominio, etc.

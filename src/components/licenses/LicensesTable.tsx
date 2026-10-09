@@ -11,6 +11,7 @@ import {
   BILLING_LABELS,
   PRICING_LABELS,
   formatAmount,
+  hasSeats,
   totalCostCents,
   wastedCostCents,
   LICENSE_STATUS_META,
@@ -137,6 +138,10 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
               <RecordFields>
                 <RecordField label="Puestos">
+                  {!hasSeats(license.pricing) ? (
+                    <span className="text-ink-muted">Sin límite</span>
+                  ) : (
+                  <>
                   <span className="flex items-center justify-end gap-2">
                     <Button
                       type="button"
@@ -171,6 +176,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                       ? `${Math.abs(available)} de más en uso`
                       : `${available} disponible${available === 1 ? "" : "s"}`}
                   </span>
+                  </>
+                  )}
                 </RecordField>
 
                 <RecordField label="Costo">
@@ -263,6 +270,10 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                       </TableCell>
 
                       <TableCell>
+                        {!hasSeats(license.pricing) ? (
+                          <span className="text-sm text-ink-muted">Sin límite</span>
+                        ) : (
+                        <>
                         <div className="flex items-center gap-2">
                           <Button
                             type="button"
@@ -301,6 +312,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                             ? `${Math.abs(available)} de más en uso`
                             : `${available} disponible${available === 1 ? "" : "s"}`}
                         </p>
+                        </>
+                        )}
                       </TableCell>
 
                       <TableCell>

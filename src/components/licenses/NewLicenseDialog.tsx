@@ -73,8 +73,9 @@ export function NewLicenseDialog() {
                 const result = await createLicense({
                   name: values.name,
                   vendor: values.vendor,
-                  seatsTotal: Number(values.seatsTotal) || 1,
-                  seatsAssigned: Number(values.seatsAssigned) || 0,
+                  seatsTotal: values.pricing === "UNLIMITED" ? 1 : Number(values.seatsTotal) || 1,
+                  seatsAssigned:
+                    values.pricing === "UNLIMITED" ? 0 : Number(values.seatsAssigned) || 0,
                   costCents: parseMoneyToCents(values.cost),
                   currency: values.currency,
                   billing: values.billing,

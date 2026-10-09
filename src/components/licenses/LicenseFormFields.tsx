@@ -6,6 +6,7 @@ import {
   PRICING_LABELS,
   PRICING_ORDER,
   formatAmount,
+  hasSeats,
   parseMoneyToCents,
   BILLING_ORDER,
   CURRENCIES,
@@ -130,6 +131,7 @@ export function LicenseFormFields({
         </div>
       </div>
 
+      {hasSeats(values.pricing) && (
       <div className="rounded-lg border bg-slate-50 p-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -165,10 +167,11 @@ export function LicenseFormFields({
           )}
         </p>
       </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <Label>¿Cómo se cobra?</Label>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {PRICING_ORDER.map((p) => {
             const selected = values.pricing === p;
             return (
