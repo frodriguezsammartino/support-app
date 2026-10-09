@@ -54,13 +54,17 @@ export function annualCostCents(license: {
   return 0;
 }
 
-export function formatMoney(cents: number | null, currency: string) {
-  if (cents == null) return "—";
-  const amount = cents / 100;
-  return `${currency} ${amount.toLocaleString("es-AR", {
+/** Solo el número, sin la moneda: para cuando la moneda ya se muestra aparte. */
+export function formatAmount(cents: number) {
+  return (cents / 100).toLocaleString("es-AR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
+}
+
+export function formatMoney(cents: number | null, currency: string) {
+  if (cents == null) return "—";
+  return `${currency} ${formatAmount(cents)}`;
 }
 
 /** "1250.5" -> 125050 centavos. Acepta coma o punto como separador decimal. */
@@ -104,11 +108,6 @@ export function getLicenseAlert(license: LicenseLike): LicenseAlert {
   if (license.status === "CANCELLED" || !license.expiresAt) return "NONE";
   if (license.autoRenew) return "AUTO";
   return getExpiryState(license.expiresAt);
-}
-
-export function needsAction(license: LicenseLike) {
-  const alert = getLicenseAlert(license);
-  return alert === "EXPIRED" || alert === "EXPIRING";
 }
 
 // ------------------------------------------------------------------ calendario de pagos

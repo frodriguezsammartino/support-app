@@ -1,21 +1,9 @@
 import { db } from "@/lib/db";
-import {
-  annualCostCents,
-  formatMoney,
-  getLicenseAlert,
-  getPaymentCalendar,
-} from "@/lib/licenses";
+import { annualCostCents, getLicenseAlert, getPaymentCalendar } from "@/lib/licenses";
+import { LicensesSummary } from "@/components/licenses/LicensesSummary";
 import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTable";
 import { NewLicenseDialog } from "@/components/licenses/NewLicenseDialog";
 import { PaymentCalendar } from "@/components/licenses/PaymentCalendar";
-import { KpiCard } from "@/components/charts/KpiCard";
-
-/** Junta los totales por moneda en un solo texto: "ARS 12.000 · USD 30,00". */
-function joinByCurrency(totals: Record<string, number>) {
-  const entries = Object.entries(totals).sort(([a], [b]) => a.localeCompare(b));
-  if (entries.length === 0) return "—";
-  return entries.map(([currency, cents]) => formatMoney(cents, currency)).join(" · ");
-}
 
 export default async function LicenciasPage() {
   const licenses = await db.license.findMany({ orderBy: { code: "asc" } });
@@ -44,13 +32,16 @@ export default async function LicenciasPage() {
   const calendar = getPaymentCalendar(active, 12);
   const thisMonth = calendar[0];
 
-  // Los costos no se mezclan entre monedas: se muestra un total por cada una.
+  // Las monedas nunca se suman entre sí: cada una lleva su propio renglón.
+  const currencies = Array.from(new Set(active.map((l) => l.currency))).sort();
+
   const annualByCurrency = active.reduce<Record<string, number>>((acc, l) => {
-    const cents = annualCostCents(l);
-    if (cents > 0) acc[l.currency] = (acc[l.currency] ?? 0) + cents;
+    acc[l.currency] = (acc[l.currency] ?? 0) + annualCostCents(l);
     return acc;
   }, {});
-  const annualEntries = Object.entries(annualByCurrency).sort(([a], [b]) => a.localeCompare(b));
+
+  const toRows = (totals: Record<string, number>) =>
+    currencies.map((currency) => ({ currency, cents: totals[currency] ?? 0 }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,24 +49,14 @@ export default async function LicenciasPage() {
         <NewLicenseDialog />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Licencias activas" value={String(active.length)} />
-        <KpiCard label="Vencidas" value={String(expired)} />
-        <KpiCard label="Por vencer" value={String(expiring)} />
-        <KpiCard label="A pagar este mes" value={joinByCurrency(thisMonth?.totals ?? {})} />
-      </div>
-
-      {annualEntries.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {annualEntries.map(([currency, cents]) => (
-            <KpiCard
-              key={currency}
-              label={`Gasto anual en ${currency}`}
-              value={formatMoney(cents, currency)}
-            />
-          ))}
-        </div>
-      )}
+      <LicensesSummary
+        active={active.length}
+        expired={expired}
+        expiring={expiring}
+        monthRows={toRows(thisMonth?.totals ?? {})}
+        monthLabel={thisMonth?.label ?? ""}
+        annualRows={toRows(annualByCurrency)}
+      />
 
       <LicensesTable licenses={rows} />
       <PaymentCalendar months={calendar} />
