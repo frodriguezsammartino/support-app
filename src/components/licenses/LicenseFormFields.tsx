@@ -2,12 +2,18 @@
 
 import {
   BILLING_LABELS,
+  PRICING_HINTS,
+  PRICING_LABELS,
+  PRICING_ORDER,
+  formatAmount,
+  parseMoneyToCents,
   BILLING_ORDER,
   CURRENCIES,
   LICENSE_STATUS_META,
   LICENSE_STATUS_ORDER,
   type Currency,
   type LicenseBilling,
+  type LicensePricing,
   type LicenseStatus,
 } from "@/lib/licenses";
 import { Check } from "lucide-react";
@@ -30,6 +36,7 @@ export type LicenseFormValues = {
   cost: string;
   currency: Currency;
   billing: LicenseBilling;
+  pricing: LicensePricing;
   expiresAt: string;
   autoRenew: boolean;
   status: LicenseStatus;
@@ -44,6 +51,7 @@ export const EMPTY_LICENSE_FORM: LicenseFormValues = {
   cost: "",
   currency: "ARS",
   billing: "YEARLY",
+  pricing: "PER_SEAT",
   expiresAt: "",
   autoRenew: false,
   status: "ACTIVE",
@@ -71,6 +79,15 @@ export function LicenseFormFields({
   const total = Number(values.seatsTotal) || 0;
   const assigned = Number(values.seatsAssigned) || 0;
   const available = total - assigned;
+
+  // Vista previa de lo que se paga: evita equivocarse al elegir cómo se cobra.
+  const unitCents = parseMoneyToCents(values.cost);
+  const perPeriodCents =
+    unitCents == null ? null : values.pricing === "PER_SEAT" ? unitCents * total : unitCents;
+  const wastedCents =
+    unitCents == null || values.pricing !== "PER_SEAT"
+      ? 0
+      : unitCents * Math.max(0, available);
 
   return (
     <div className="flex flex-col gap-3">
@@ -149,9 +166,36 @@ export function LicenseFormFields({
         </p>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <Label>¿Cómo se cobra?</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {PRICING_ORDER.map((p) => {
+            const selected = values.pricing === p;
+            return (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onChange({ pricing: p })}
+                className={`flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                  selected
+                    ? "border-brand bg-brand-tint"
+                    : "border-slate-300 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <span className="text-sm font-medium text-ink">{PRICING_LABELS[p]}</span>
+                <span className="text-xs leading-snug text-ink-muted">{PRICING_HINTS[p]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-2">
-          <Label>Costo (opcional)</Label>
+          <Label>
+            {values.pricing === "PER_SEAT" ? "Costo por puesto" : "Costo total"} (opcional)
+          </Label>
           <Input
             inputMode="decimal"
             value={values.cost}
@@ -198,6 +242,34 @@ export function LicenseFormFields({
           </Select>
         </div>
       </div>
+
+      {perPeriodCents != null && perPeriodCents > 0 && (
+        <div className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm">
+          <span className="text-ink-muted">Se paga </span>
+          <span className="font-semibold text-ink">
+            {values.currency} {formatAmount(perPeriodCents)}
+          </span>
+          <span className="text-ink-muted">
+            {values.billing === "MONTHLY"
+              ? " por mes"
+              : values.billing === "YEARLY"
+                ? " por año"
+                : " una sola vez"}
+          </span>
+          {values.pricing === "PER_SEAT" && total > 0 && (
+            <span className="text-ink-muted">
+              {" "}
+              ({values.currency} {formatAmount(unitCents ?? 0)} × {total} puestos)
+            </span>
+          )}
+          {wastedCents > 0 && (
+            <p className="mt-1 text-xs font-medium text-[#991B1B]">
+              {values.currency} {formatAmount(wastedCents)} se pagan por {available} puesto
+              {available === 1 ? "" : "s"} que nadie usa.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-2">

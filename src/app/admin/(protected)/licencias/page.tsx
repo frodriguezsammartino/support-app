@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
-import { annualCostCents, getLicenseAlert, getPaymentCalendar } from "@/lib/licenses";
+import {
+  annualCostCents,
+  annualWastedCents,
+  getLicenseAlert,
+  getPaymentCalendar,
+} from "@/lib/licenses";
 import { LicensesSummary } from "@/components/licenses/LicensesSummary";
 import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTable";
 import { NewLicenseDialog } from "@/components/licenses/NewLicenseDialog";
@@ -18,6 +23,7 @@ export default async function LicenciasPage() {
     costCents: l.costCents,
     currency: l.currency,
     billing: l.billing,
+    pricing: l.pricing,
     expiresAt: l.expiresAt,
     autoRenew: l.autoRenew,
     status: l.status,
@@ -40,6 +46,12 @@ export default async function LicenciasPage() {
     return acc;
   }, {});
 
+  // Plata que se va por puestos pagos que nadie usa.
+  const wastedByCurrency = active.reduce<Record<string, number>>((acc, l) => {
+    acc[l.currency] = (acc[l.currency] ?? 0) + annualWastedCents(l);
+    return acc;
+  }, {});
+
   const toRows = (totals: Record<string, number>) =>
     currencies.map((currency) => ({ currency, cents: totals[currency] ?? 0 }));
 
@@ -56,6 +68,7 @@ export default async function LicenciasPage() {
         monthRows={toRows(thisMonth?.totals ?? {})}
         monthLabel={thisMonth?.label ?? ""}
         annualRows={toRows(annualByCurrency)}
+        wastedRows={toRows(wastedByCurrency)}
       />
 
       <LicensesTable licenses={rows} />

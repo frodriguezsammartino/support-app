@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
 import { createLicenseSchema, updateLicenseSchema } from "@/lib/validations";
-import type { LicenseBilling, LicenseStatus } from "@/lib/licenses";
+import type { LicenseBilling, LicensePricing, LicenseStatus } from "@/lib/licenses";
 
 export type ActionResult = { error?: string };
 
@@ -16,6 +16,7 @@ export type LicenseInput = {
   costCents?: number | null;
   currency: string;
   billing: LicenseBilling;
+  pricing: LicensePricing;
   expiresAt?: Date | null;
   autoRenew: boolean;
   status: LicenseStatus;
@@ -36,6 +37,7 @@ function toLicenseData(data: LicenseInput) {
     costCents: data.costCents ?? null,
     currency: data.currency,
     billing: data.billing,
+    pricing: data.pricing,
     expiresAt: data.expiresAt ?? null,
     autoRenew: data.autoRenew,
     status: data.status,

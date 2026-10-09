@@ -78,6 +78,7 @@ export function NewLicenseDialog() {
                   costCents: parseMoneyToCents(values.cost),
                   currency: values.currency,
                   billing: values.billing,
+                  pricing: values.pricing,
                   expiresAt: fromDateInput(values.expiresAt),
                   autoRenew: values.autoRenew,
                   status: values.status,

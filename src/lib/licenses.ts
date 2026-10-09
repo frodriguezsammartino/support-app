@@ -2,6 +2,19 @@ import { PILL, ROW_TINT, STATE_TEXT } from "./pills";
 
 export type LicenseBilling = "MONTHLY" | "YEARLY" | "ONE_TIME";
 export type LicenseStatus = "ACTIVE" | "CANCELLED";
+export type LicensePricing = "PER_SEAT" | "FLAT";
+
+export const PRICING_LABELS: Record<LicensePricing, string> = {
+  PER_SEAT: "Por puesto",
+  FLAT: "Precio fijo",
+};
+
+export const PRICING_HINTS: Record<LicensePricing, string> = {
+  PER_SEAT: "Se paga por cada puesto contratado. Un puesto sin usar es plata tirada.",
+  FLAT: "Precio cerrado del paquete. Usar menos puestos no cambia lo que se paga.",
+};
+
+export const PRICING_ORDER: LicensePricing[] = ["PER_SEAT", "FLAT"];
 
 export const BILLING_LABELS: Record<LicenseBilling, string> = {
   MONTHLY: "Por mes",
@@ -37,14 +50,46 @@ function getExpiryState(expiresAt: Date | null): ExpiryState {
   return "VALID";
 }
 
-/** Lo que cuesta por año. Un pago único no es gasto recurrente, así que no suma. */
-export function annualCostCents(license: {
+type CostLike = {
   costCents: number | null;
-  billing: LicenseBilling;
-}): number {
+  pricing: LicensePricing;
+  seatsTotal: number;
+  seatsAssigned: number;
+};
+
+/** Lo que se paga por período: con PER_SEAT hay que multiplicar por los puestos. */
+export function totalCostCents(license: CostLike): number {
   if (!license.costCents) return 0;
-  if (license.billing === "MONTHLY") return license.costCents * 12;
-  if (license.billing === "YEARLY") return license.costCents;
+  return license.pricing === "PER_SEAT"
+    ? license.costCents * license.seatsTotal
+    : license.costCents;
+}
+
+/**
+ * Plata que se paga por puestos que nadie usa. Solo existe con PER_SEAT: en un
+ * paquete de precio fijo los puestos de más no cuestan nada extra.
+ */
+export function wastedCostCents(license: CostLike): number {
+  if (!license.costCents || license.pricing !== "PER_SEAT") return 0;
+  const unused = Math.max(0, license.seatsTotal - license.seatsAssigned);
+  return license.costCents * unused;
+}
+
+/** Lo que cuesta por año. Un pago único no es gasto recurrente, así que no suma. */
+export function annualCostCents(license: CostLike & { billing: LicenseBilling }): number {
+  const total = totalCostCents(license);
+  if (!total) return 0;
+  if (license.billing === "MONTHLY") return total * 12;
+  if (license.billing === "YEARLY") return total;
+  return 0;
+}
+
+/** Lo que se desperdicia por año, con la misma regla que el gasto anual. */
+export function annualWastedCents(license: CostLike & { billing: LicenseBilling }): number {
+  const wasted = wastedCostCents(license);
+  if (!wasted) return 0;
+  if (license.billing === "MONTHLY") return wasted * 12;
+  if (license.billing === "YEARLY") return wasted;
   return 0;
 }
 
@@ -142,12 +187,12 @@ export function monthLabel(date: Date) {
   return `${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
-type PayableLicense = LicenseLike & {
-  id: string;
-  name: string;
-  costCents: number | null;
-  currency: string;
-};
+type PayableLicense = LicenseLike &
+  CostLike & {
+    id: string;
+    name: string;
+    currency: string;
+  };
 
 export type ScheduledPayment = {
   licenseId: string;
@@ -168,12 +213,13 @@ export function getPaymentsInWindow(
   to: Date
 ): ScheduledPayment[] {
   if (license.status === "CANCELLED") return [];
-  if (!license.expiresAt || !license.costCents) return [];
+  const cents = totalCostCents(license);
+  if (!license.expiresAt || !cents) return [];
 
   const base = {
     licenseId: license.id,
     licenseName: license.name,
-    cents: license.costCents,
+    cents,
     currency: license.currency,
   };
 

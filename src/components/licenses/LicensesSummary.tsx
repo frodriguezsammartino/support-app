@@ -17,13 +17,17 @@ function MoneyCard({
   title,
   subtitle,
   rows,
+  alert = false,
 }: {
   title: string;
   subtitle: string;
   rows: MoneyRow[];
+  /** Plata desperdiciada: se marca en rojo para que no pase desapercibida. */
+  alert?: boolean;
 }) {
+  const hasAmount = rows.some((r) => r.cents > 0);
   return (
-    <Card>
+    <Card className={alert && hasAmount ? "ring-[#FECACA]" : undefined}>
       <CardContent className="flex h-full flex-col gap-3 py-4">
         <CardTitleBlock title={title} subtitle={subtitle} />
 
@@ -38,7 +42,11 @@ function MoneyCard({
                 </span>
                 <span
                   className={`text-xl font-semibold tabular-nums ${
-                    row.cents > 0 ? "text-ink" : "text-slate-300"
+                    row.cents === 0
+                      ? "text-slate-300"
+                      : alert
+                        ? "text-[#991B1B]"
+                        : "text-ink"
                   }`}
                 >
                   {formatAmount(row.cents)}
@@ -83,6 +91,7 @@ export function LicensesSummary({
   monthRows,
   monthLabel,
   annualRows,
+  wastedRows,
 }: {
   active: number;
   expired: number;
@@ -90,9 +99,10 @@ export function LicensesSummary({
   monthRows: MoneyRow[];
   monthLabel: string;
   annualRows: MoneyRow[];
+  wastedRows: MoneyRow[];
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardContent className="flex h-full flex-col gap-3 py-4">
           <CardTitleBlock title="Estado del inventario" subtitle={`${active} licencias activas`} />
@@ -114,6 +124,12 @@ export function LicensesSummary({
 
       <MoneyCard title="A pagar este mes" subtitle={monthLabel} rows={monthRows} />
       <MoneyCard title="Gasto anual" subtitle="proyectado a 12 meses" rows={annualRows} />
+      <MoneyCard
+        title="Se paga sin usar"
+        subtitle="por año, solo licencias por puesto"
+        rows={wastedRows}
+        alert
+      />
     </div>
   );
 }

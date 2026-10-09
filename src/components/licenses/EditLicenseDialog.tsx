@@ -10,6 +10,7 @@ import {
   parseMoneyToCents,
   type Currency,
   type LicenseBilling,
+  type LicensePricing,
   type LicenseStatus,
 } from "@/lib/licenses";
 import {
@@ -38,6 +39,7 @@ export type EditableLicense = {
   costCents: number | null;
   currency: string;
   billing: LicenseBilling;
+  pricing: LicensePricing;
   expiresAt: Date | null;
   autoRenew: boolean;
   status: LicenseStatus;
@@ -53,6 +55,7 @@ function toFormValues(license: EditableLicense): LicenseFormValues {
     cost: centsToInput(license.costCents),
     currency: (license.currency === "USD" ? "USD" : "ARS") as Currency,
     billing: license.billing,
+    pricing: license.pricing,
     expiresAt: toDateInput(license.expiresAt),
     autoRenew: license.autoRenew,
     status: license.status,
@@ -112,6 +115,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
                   costCents: parseMoneyToCents(values.cost),
                   currency: values.currency,
                   billing: values.billing,
+                  pricing: values.pricing,
                   expiresAt: fromDateInput(values.expiresAt),
                   autoRenew: values.autoRenew,
                   status: values.status,

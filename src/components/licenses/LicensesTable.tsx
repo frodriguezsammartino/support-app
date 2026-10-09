@@ -3,15 +3,18 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adjustAssignedSeats, deleteLicense } from "@/lib/actions/licenses";
 import {
   ALERT_META,
   BILLING_LABELS,
+  PRICING_LABELS,
+  formatAmount,
+  totalCostCents,
+  wastedCostCents,
   LICENSE_STATUS_META,
   LICENSE_STATUS_ORDER,
-  formatMoney,
   getLicenseAlert,
   type LicenseBilling,
   type LicenseStatus,
@@ -171,10 +174,16 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                 </RecordField>
 
                 <RecordField label="Costo">
-                  {formatMoney(license.costCents, license.currency)}
+                  {license.currency} {formatAmount(totalCostCents(license))}
                   <span className="block text-xs text-slate-400">
-                    {BILLING_LABELS[license.billing as LicenseBilling]}
+                    {BILLING_LABELS[license.billing as LicenseBilling]} ·{" "}
+                    {PRICING_LABELS[license.pricing]}
                   </span>
+                  {wastedCostCents(license) > 0 && (
+                    <span className="mt-0.5 block text-xs font-medium text-[#991B1B]">
+                      {license.currency} {formatAmount(wastedCostCents(license))} sin usar
+                    </span>
+                  )}
                 </RecordField>
 
                 <RecordField label="Vence">
@@ -297,11 +306,18 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                       <TableCell>
                         <div className="flex flex-col leading-tight">
                           <span className="text-ink">
-                            {formatMoney(license.costCents, license.currency)}
+                            {license.currency} {formatAmount(totalCostCents(license))}
                           </span>
                           <span className="text-xs text-slate-400">
-                            {BILLING_LABELS[license.billing as LicenseBilling]}
+                            {BILLING_LABELS[license.billing as LicenseBilling]} ·{" "}
+                            {PRICING_LABELS[license.pricing]}
                           </span>
+                          {wastedCostCents(license) > 0 && (
+                            <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-[#991B1B]">
+                              <AlertTriangle className="size-3" />
+                              {license.currency} {formatAmount(wastedCostCents(license))} sin usar
+                            </span>
+                          )}
                         </div>
                       </TableCell>
 

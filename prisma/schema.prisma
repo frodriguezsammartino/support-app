@@ -215,6 +215,13 @@ enum LicenseStatus {
   CANCELLED
 }
 
+enum LicensePricing {
+  /// Se paga por cada puesto: un puesto sin usar es plata tirada.
+  PER_SEAT
+  /// Precio cerrado por el paquete: sobran puestos pero no cuestan de mas.
+  FLAT
+}
+
 /// Una licencia de software contratada: Office, antivirus, el dominio, etc.
 /// `seats` son los puestos: cuantos se pagan y cuantos estan asignados.
 model License {
@@ -227,9 +234,12 @@ model License {
   seatsAssigned Int @default(0)
 
   /// En centavos, para no arrastrar errores de redondeo con los decimales.
+  /// Con PER_SEAT es el precio de un puesto; con FLAT es el total del paquete.
   costCents Int?
   currency  String         @default("ARS")
   billing   LicenseBilling @default(YEARLY)
+  /// FLAT por defecto: es lo que significaba costCents antes de existir este campo.
+  pricing   LicensePricing @default(FLAT)
 
   /// Proximo vencimiento o fecha de cobro. Con autoRenew se usa como ancla
   /// para proyectar los pagos siguientes.
