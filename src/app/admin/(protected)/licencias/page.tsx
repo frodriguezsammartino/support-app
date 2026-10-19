@@ -4,13 +4,14 @@ import {
   annualWastedCents,
   getLicenseAlert,
   getPaymentCalendar,
+  groupOfKind,
   KIND_ORDER,
   type LicenseKind,
 } from "@/lib/licenses";
 import { CostByKind, type KindTotals } from "@/components/licenses/CostByKind";
 import { LicensesSummary } from "@/components/licenses/LicensesSummary";
 import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTable";
-import { NewLicenseDialog } from "@/components/licenses/NewLicenseDialog";
+import { LicenseWizard } from "@/components/licenses/LicenseWizard";
 import { PaymentCalendar } from "@/components/licenses/PaymentCalendar";
 
 export default async function LicenciasPage() {
@@ -32,7 +33,12 @@ export default async function LicenciasPage() {
     autoRenew: l.autoRenew,
     status: l.status,
     notes: l.notes,
+    url: l.url,
   }));
+
+  // Dos tablas en la misma pantalla: licencias de software y servicios contratados.
+  const licenseRows = rows.filter((r) => groupOfKind(r.kind) === "LICENSE");
+  const serviceRows = rows.filter((r) => groupOfKind(r.kind) === "SERVICE");
 
   // Las dadas de baja no se cuentan: no se pagan ni se usan.
   const active = licenses.filter((l) => l.status === "ACTIVE");
@@ -72,10 +78,6 @@ export default async function LicenciasPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <NewLicenseDialog />
-      </div>
-
       <LicensesSummary
         active={active.length}
         expired={expired}
@@ -86,7 +88,16 @@ export default async function LicenciasPage() {
         wastedRows={toRows(wastedByCurrency)}
       />
 
-      <LicensesTable licenses={rows} />
+      <LicensesTable
+        group="LICENSE"
+        licenses={licenseRows}
+        action={<LicenseWizard group="LICENSE" />}
+      />
+      <LicensesTable
+        group="SERVICE"
+        licenses={serviceRows}
+        action={<LicenseWizard group="SERVICE" />}
+      />
       <CostByKind totals={annualByKind} currencies={currencies} />
       <PaymentCalendar months={calendar} />
     </div>

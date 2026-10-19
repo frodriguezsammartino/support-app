@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeUrl } from "./url";
 
 export const createTicketSchema = z.object({
   reporterName: z.string().trim().min(2, "Ingresá tu nombre completo").max(120),
@@ -124,6 +125,20 @@ export const createLicenseSchema = z.object({
   autoRenew: z.coerce.boolean(),
   status: z.enum(["ACTIVE", "CANCELLED"]),
   notes: optionalText(4000),
+  url: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v, ctx) => {
+      const normalized = normalizeUrl(v);
+      if (normalized === undefined) {
+        ctx.addIssue({ code: "custom", message: "El enlace no es válido. Ejemplo: https://portal.proveedor.com" });
+        return z.NEVER;
+      }
+      return normalized;
+    }),
 });
 
 export const updateLicenseSchema = createLicenseSchema;

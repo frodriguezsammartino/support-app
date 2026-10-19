@@ -3,13 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { AlertTriangle, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adjustAssignedSeats, deleteLicense } from "@/lib/actions/licenses";
 import {
   ALERT_META,
   BILLING_LABELS,
-  KIND_ORDER,
+  GROUP_KINDS,
   KIND_SHORT,
   PRICING_LABELS,
   formatAmount,
@@ -20,6 +20,7 @@ import {
   LICENSE_STATUS_ORDER,
   getLicenseAlert,
   type LicenseBilling,
+  type LicenseGroup,
   type LicenseKind,
   type LicenseStatus,
 } from "@/lib/licenses";
@@ -57,7 +58,48 @@ import { useIsAdmin } from "@/components/RoleProvider";
 
 export type LicenseRow = EditableLicense & { code: number };
 
-export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
+const GROUP_COPY: Record<LicenseGroup, { title: string; empty: string; column: string }> = {
+  LICENSE: {
+    title: "Licencias",
+    empty: "Todavía no cargaste ninguna licencia.",
+    column: "Licencia",
+  },
+  SERVICE: {
+    title: "Servicios",
+    empty: "Todavía no cargaste ningún servicio.",
+    column: "Servicio",
+  },
+};
+
+/** El enlace al portal del proveedor, si se cargó. */
+function LinkIcon({ url }: { url: string | null }) {
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Abrir el enlace"
+      aria-label="Abrir el enlace"
+      className="inline-flex align-middle text-brand hover:text-brand-hover"
+    >
+      <ExternalLink className="size-3.5" />
+    </a>
+  );
+}
+
+export function LicensesTable({
+  licenses,
+  group,
+  action,
+}: {
+  licenses: LicenseRow[];
+  group: LicenseGroup;
+  /** El botón de "Nueva ...", que vive junto al título de cada tabla. */
+  action?: React.ReactNode;
+}) {
+  const copy = GROUP_COPY[group];
+  const showSeats = group === "LICENSE";
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const [isPending, startTransition] = useTransition();
@@ -90,6 +132,13 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-ink">
+          {copy.title} <span className="font-normal text-ink-muted">({licenses.length})</span>
+        </h2>
+        {action}
+      </div>
+
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Buscar</span>
@@ -100,6 +149,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {!showSeats && (
         <div className="flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Tipo</span>
           <Select value={kindFilter} onValueChange={(v) => v && setKindFilter(v)}>
@@ -110,7 +160,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Todos</SelectItem>
-              {KIND_ORDER.map((k) => (
+              {GROUP_KINDS[group].map((k) => (
                 <SelectItem key={k} value={k}>
                   {KIND_SHORT[k]}
                 </SelectItem>
@@ -118,6 +168,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
             </SelectContent>
           </Select>
         </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Estado</span>
@@ -142,9 +193,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
       <MobileRecords>
         {visible.length === 0 && (
           <EmptyRecords>
-            {licenses.length === 0
-              ? "Todavía no cargaste ninguna licencia ni servicio."
-              : "Nada coincide con estos filtros."}
+            {licenses.length === 0 ? copy.empty : "Nada coincide con estos filtros."}
           </EmptyRecords>
         )}
 
@@ -156,7 +205,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
             <RecordCard key={license.id} className={statusMeta.rowClass}>
               <RecordTop>
                 <span className="min-w-0 font-medium text-ink">
-                  <span className="text-slate-400">#{license.code}</span> {license.name}
+                  <span className="text-slate-400">#{license.code}</span> {license.name}{" "}
+                  <LinkIcon url={license.url} />
                 </span>
                 <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
               </RecordTop>
@@ -166,6 +216,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
               </p>
 
               <RecordFields>
+                {showSeats && (
                 <RecordField label="Puestos">
                   {!hasSeats(license.pricing) ? (
                     <span className="text-ink-muted">Sin límite</span>
@@ -208,6 +259,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                   </>
                   )}
                 </RecordField>
+                )}
 
                 <RecordField label="Costo">
                   {license.currency} {formatAmount(totalCostCents(license))}
@@ -266,8 +318,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-14">#</TableHead>
-                  <TableHead>Licencia / servicio</TableHead>
-                  <TableHead className="w-56">Puestos</TableHead>
+                  <TableHead>{copy.column}</TableHead>
+                  {showSeats && <TableHead className="w-56">Puestos</TableHead>}
                   <TableHead className="w-44">Costo</TableHead>
                   <TableHead className="w-48">Vence / se renueva</TableHead>
                   <TableHead className="w-32">Estado</TableHead>
@@ -277,10 +329,8 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
               <TableBody>
                 {visible.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-sm text-ink-muted">
-                      {licenses.length === 0
-                        ? "Todavía no cargaste ninguna licencia ni servicio."
-                        : "Nada coincide con estos filtros."}
+                    <TableCell colSpan={showSeats ? 7 : 6} className="py-8 text-center text-sm text-ink-muted">
+                      {licenses.length === 0 ? copy.empty : "Nada coincide con estos filtros."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -294,13 +344,15 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                       <TableCell className="text-slate-400">#{license.code}</TableCell>
 
                       <TableCell>
-                        <span className="font-medium">{license.name}</span>
+                        <span className="font-medium">{license.name}</span>{" "}
+                        <LinkIcon url={license.url} />
                         <p className="mt-0.5 text-xs text-ink-muted">
                           {KIND_SHORT[license.kind]}
                           {license.vendor && ` · ${license.vendor}`}
                         </p>
                       </TableCell>
 
+                      {showSeats && (
                       <TableCell>
                         {!hasSeats(license.pricing) ? (
                           <span className="text-sm text-ink-muted">Sin límite</span>
@@ -347,6 +399,7 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                         </>
                         )}
                       </TableCell>
+                      )}
 
                       <TableCell>
                         <div className="flex flex-col leading-tight">

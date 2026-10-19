@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { updateLicense } from "@/lib/actions/licenses";
 import {
   centsToInput,
+  groupOfKind,
   parseMoneyToCents,
   type Currency,
   type LicenseBilling,
@@ -46,6 +47,7 @@ export type EditableLicense = {
   autoRenew: boolean;
   status: LicenseStatus;
   notes: string | null;
+  url: string | null;
 };
 
 function toFormValues(license: EditableLicense): LicenseFormValues {
@@ -63,6 +65,7 @@ function toFormValues(license: EditableLicense): LicenseFormValues {
     autoRenew: license.autoRenew,
     status: license.status,
     notes: license.notes ?? "",
+    url: license.url ?? "",
   };
 }
 
@@ -94,6 +97,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
         </DialogHeader>
 
         <LicenseFormFields
+          group={groupOfKind(license.kind)}
           values={values}
           onChange={(changes) => setValues((v) => ({ ...v, ...changes }))}
         />
@@ -125,6 +129,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
                   autoRenew: values.autoRenew,
                   status: values.status,
                   notes: values.notes,
+                  url: values.url,
                 });
                 if (result.error) {
                   toast.error(result.error);

@@ -28,6 +28,21 @@ export const KIND_HINTS: Record<LicenseKind, string> = {
 
 export const KIND_ORDER: LicenseKind[] = ["SOFTWARE", "SERVICE", "SUPPORT", "OTHER"];
 
+/**
+ * La pantalla tiene dos tablas: las licencias (software) y los servicios
+ * contratados (internet, telefonía, soporte, otros gastos fijos).
+ */
+export type LicenseGroup = "LICENSE" | "SERVICE";
+
+export const GROUP_KINDS: Record<LicenseGroup, LicenseKind[]> = {
+  LICENSE: ["SOFTWARE"],
+  SERVICE: ["SERVICE", "SUPPORT", "OTHER"],
+};
+
+export function groupOfKind(kind: LicenseKind): LicenseGroup {
+  return kind === "SOFTWARE" ? "LICENSE" : "SERVICE";
+}
+
 export type LicensePricing = "PER_SEAT" | "FLAT" | "UNLIMITED";
 
 export const PRICING_LABELS: Record<LicensePricing, string> = {
@@ -148,9 +163,14 @@ export function parseMoneyToCents(value: string): number | null {
   return Math.round(amount * 100);
 }
 
-/** Centavos -> el texto que va en el input del formulario. */
+/**
+ * Centavos -> el texto que va en el input del formulario, en el mismo formato
+ * que acepta parseMoneyToCents (coma decimal, sin separador de miles). Con punto
+ * decimal, "49.99" se leería como 4999 y el costo se multiplicaría por 100.
+ */
 export function centsToInput(cents: number | null) {
-  return cents == null ? "" : String(cents / 100);
+  if (cents == null) return "";
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2).replace(".", ",");
 }
 
 // ------------------------------------------------------------------ vencimientos

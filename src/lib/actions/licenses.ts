@@ -27,6 +27,7 @@ export type LicenseInput = {
   autoRenew: boolean;
   status: LicenseStatus;
   notes?: string | null;
+  url?: string | null;
 };
 
 function revalidateLicenses() {
@@ -49,6 +50,7 @@ function toLicenseData(data: LicenseInput) {
     autoRenew: data.autoRenew,
     status: data.status,
     notes: data.notes || null,
+    url: data.url || null,
   };
 }
 

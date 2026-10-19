@@ -263,6 +263,8 @@ model License {
   autoRenew Boolean       @default(false)
   status    LicenseStatus @default(ACTIVE)
   notes     String?
+  /// Portal del proveedor, contrato o panel de administración.
+  url       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
