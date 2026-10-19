@@ -21,6 +21,8 @@ export const completeTicketSchema = z.object({
 
 export const adminLoginSchema = z.object({
   password: z.string().min(1, "Ingresá la contraseña"),
+  // Quién dice ser: cada ingreso se compara solo contra su propia contraseña.
+  role: z.enum(["TECH", "ADMIN"]),
 });
 
 export const createInternalTicketSchema = z.object({

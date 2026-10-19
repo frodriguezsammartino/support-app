@@ -12,24 +12,41 @@ function decodeHash(b64: string | undefined) {
   return b64 ? Buffer.from(b64, "base64").toString("utf8") : null;
 }
 
+const HASH_ENV: Record<Role, string | undefined> = {
+  get ADMIN() {
+    return process.env.ADMIN_PASSWORD_HASH_B64;
+  },
+  get TECH() {
+    return process.env.TECH_PASSWORD_HASH_B64;
+  },
+};
+
+const NOT_CONFIGURED: Record<Role, string> = {
+  ADMIN: "El servidor no tiene configurada la contraseña del ingreso administrativo.",
+  TECH: "El servidor no tiene configurada la contraseña del ingreso técnico.",
+};
+
+/**
+ * Hay dos ingresos, cada uno con su contraseña. La contraseña se compara solo
+ * contra la del ingreso elegido: la del técnico no abre el ingreso administrativo
+ * ni al revés, aunque alguien se equivoque de pestaña.
+ */
 export async function adminLogin(_prevState: AdminLoginState, formData: FormData): Promise<AdminLoginState> {
-  const parsed = adminLoginSchema.safeParse({ password: formData.get("password") });
+  const parsed = adminLoginSchema.safeParse({
+    password: formData.get("password"),
+    role: formData.get("role"),
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Contraseña inválida" };
   }
 
-  const adminHash = decodeHash(process.env.ADMIN_PASSWORD_HASH_B64);
-  if (!adminHash) {
-    return { error: "El servidor no tiene configurada la contraseña de admin." };
+  const { role, password } = parsed.data;
+  const hash = decodeHash(HASH_ENV[role]);
+  if (!hash) {
+    return { error: NOT_CONFIGURED[role] };
   }
-  // La del técnico es opcional: si no está configurada, solo entra el admin.
-  const techHash = decodeHash(process.env.TECH_PASSWORD_HASH_B64);
 
-  let role: Role | null = null;
-  if (await compare(parsed.data.password, adminHash)) role = "ADMIN";
-  else if (techHash && (await compare(parsed.data.password, techHash))) role = "TECH";
-
-  if (!role) {
+  if (!(await compare(password, hash))) {
     return { error: "Contraseña incorrecta." };
   }
 
