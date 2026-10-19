@@ -13,6 +13,7 @@ import {
   type StatsFilters,
 } from "@/lib/stats";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/adminAuth";
 import { getMaintenanceStatus } from "@/lib/maintenance";
 import { getLicenseAlert } from "@/lib/licenses";
 import { KpiCard } from "@/components/charts/KpiCard";
@@ -41,6 +42,7 @@ function SectionTitle({ children, hint }: { children: string; hint?: string }) {
 }
 
 export default async function DashboardPage(props: PageProps<"/admin/dashboard">) {
+  await requireAdmin();
   const searchParams = await props.searchParams;
   const range = typeof searchParams?.range === "string" ? searchParams.range : "all";
   const categoryId = typeof searchParams?.categoryId === "string" ? searchParams.categoryId : undefined;

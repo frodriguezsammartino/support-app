@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/components/RoleProvider";
 import {
   DesktopTable,
   EmptyRecords,
@@ -60,6 +61,7 @@ export function PendientesTable({
   categories: { id: string; name: string }[];
 }) {
   const [rows, setRows] = useState(tickets);
+  const isAdmin = useIsAdmin();
 
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [reporterFilter, setReporterFilter] = useState<string>("ALL");
@@ -250,18 +252,20 @@ export function PendientesTable({
               </RecordField>
             </RecordFields>
 
-            <RecordActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(ticket)}
-                className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-              >
-                <Trash2 className="size-4" />
-                Eliminar
-              </Button>
-            </RecordActions>
+            {isAdmin && (
+              <RecordActions>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(ticket)}
+                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                >
+                  <Trash2 className="size-4" />
+                  Eliminar
+                </Button>
+              </RecordActions>
+            )}
           </RecordCard>
         ))}
       </MobileRecords>
@@ -326,16 +330,18 @@ export function PendientesTable({
                       hace {formatDistanceToNow(ticket.createdAt, { locale: es })}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Eliminar"
-                        onClick={() => handleDelete(ticket)}
-                        className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Eliminar"
+                          onClick={() => handleDelete(ticket)}
+                          className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

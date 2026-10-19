@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/adminAuth";
+import { actorName, adminOnly, requireStaff } from "@/lib/adminAuth";
 import { sendTicketCompletedEmail } from "@/lib/email";
 import {
   addCommentSchema,
@@ -42,7 +42,7 @@ export async function createTicket(_prevState: FormState, formData: FormData): P
 }
 
 export async function addComment(_prevState: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  const role = await requireStaff();
 
   const parsed = addCommentSchema.safeParse({
     ticketId: formData.get("ticketId"),
@@ -56,7 +56,7 @@ export async function addComment(_prevState: FormState, formData: FormData): Pro
   await db.comment.create({
     data: {
       ticketId: parsed.data.ticketId,
-      authorName: "Técnico",
+      authorName: actorName(role, "Técnico"),
       body: parsed.data.body,
       isFromAdmin: true,
     },
@@ -72,7 +72,7 @@ export async function updateTicketStatus(
   ticketId: string,
   toStatus: "BACKLOG" | "IN_PROGRESS"
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const ticket = await db.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket || ticket.status === "COMPLETED") return { error: "El ticket no se puede mover." };
@@ -98,7 +98,7 @@ export async function updateTicketStatus(
 }
 
 export async function updateTicketPriority(ticketId: string, priority: TicketPriority): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   await db.ticket.update({ where: { id: ticketId }, data: { priority } });
 
@@ -108,7 +108,7 @@ export async function updateTicketPriority(ticketId: string, priority: TicketPri
 }
 
 export async function updateTicketCategory(ticketId: string, categoryId: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   await db.ticket.update({ where: { id: ticketId }, data: { categoryId } });
 
@@ -118,10 +118,10 @@ export async function updateTicketCategory(ticketId: string, categoryId: string)
 }
 
 export async function updateTicketTitle(ticketId: string, title: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const trimmed = title.trim();
-  if (trimmed.length < 5) return { error: "El título es muy corto." };
+  if (trimmed.length < 3) return { error: "El título tiene que tener al menos 3 letras." };
 
   await db.ticket.update({ where: { id: ticketId }, data: { title: trimmed } });
 
@@ -131,7 +131,8 @@ export async function updateTicketTitle(ticketId: string, title: string): Promis
 }
 
 export async function deleteTicket(ticketId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const denied = await adminOnly();
+  if (denied) return denied;
 
   await db.ticket.delete({ where: { id: ticketId } });
 
@@ -142,7 +143,7 @@ export async function deleteTicket(ticketId: string): Promise<ActionResult> {
 }
 
 export async function completeTicket(_prevState: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = completeTicketSchema.safeParse({
     ticketId: formData.get("ticketId"),
@@ -192,7 +193,7 @@ export async function triageAndStart(
   categoryId: string,
   priority: TicketPriority
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const ticket = await db.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket || ticket.status !== "BACKLOG") return { error: "El ticket ya no está en espera." };
@@ -218,7 +219,7 @@ export async function reopenTicket(
   ticketId: string,
   toStatus: "BACKLOG" | "IN_PROGRESS"
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const ticket = await db.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket || ticket.status !== "COMPLETED") return { error: "El ticket no está completado." };
@@ -249,7 +250,7 @@ export async function createInternalTicket(input: {
   assetId?: string;
   createdAt?: Date | null;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  const role = await requireStaff();
 
   const parsed = createInternalTicketSchema.safeParse(input);
   if (!parsed.success) {
@@ -262,7 +263,7 @@ export async function createInternalTicket(input: {
   await db.ticket.create({
     data: {
       createdAt,
-      reporterName: parsed.data.reporterName?.trim() || "Técnico",
+      reporterName: parsed.data.reporterName?.trim() || actorName(role, "Técnico"),
       reporterEmail: null,
       title: parsed.data.title,
       description: parsed.data.description ?? "",

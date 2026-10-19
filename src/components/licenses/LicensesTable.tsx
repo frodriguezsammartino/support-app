@@ -53,11 +53,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 export type LicenseRow = EditableLicense & { code: number };
 
 export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
@@ -235,20 +237,22 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
 
               <RecordActions>
                 <EditLicenseDialog license={license} />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => {
-                    if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
-                    run(() => deleteLicense(license.id));
-                  }}
-                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                >
-                  <Trash2 className="size-4" />
-                  Eliminar
-                </Button>
+                {isAdmin && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => {
+                      if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
+                      run(() => deleteLicense(license.id));
+                    }}
+                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                  >
+                    <Trash2 className="size-4" />
+                    Eliminar
+                  </Button>
+                )}
               </RecordActions>
             </RecordCard>
           );
@@ -383,20 +387,22 @@ export function LicensesTable({ licenses }: { licenses: LicenseRow[] }) {
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           <EditLicenseDialog license={license} />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Eliminar"
-                            disabled={isPending}
-                            onClick={() => {
-                              if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
-                              run(() => deleteLicense(license.id));
-                            }}
-                            className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Eliminar"
+                              disabled={isPending}
+                              onClick={() => {
+                                if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
+                                run(() => deleteLicense(license.id));
+                              }}
+                              className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

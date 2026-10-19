@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/adminAuth";
+import { adminOnly, requireStaff } from "@/lib/adminAuth";
 import { createAssetSchema, updateAssetSchema } from "@/lib/validations";
 import type { AssetStatus, AssetType } from "@/lib/assets";
 
@@ -46,7 +46,7 @@ function toAssetData(data: AssetInput) {
 }
 
 export async function createAsset(input: AssetInput): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = createAssetSchema.safeParse(input);
   if (!parsed.success) {
@@ -60,7 +60,7 @@ export async function createAsset(input: AssetInput): Promise<ActionResult> {
 }
 
 export async function updateAsset(assetId: string, input: AssetInput): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = updateAssetSchema.safeParse(input);
   if (!parsed.success) {
@@ -74,7 +74,7 @@ export async function updateAsset(assetId: string, input: AssetInput): Promise<A
 }
 
 export async function updateAssetStatus(assetId: string, status: AssetStatus): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   await db.asset.update({ where: { id: assetId }, data: { status } });
 
@@ -97,7 +97,8 @@ export type DeleteAssetResult = ActionResult & {
  * reparar.
  */
 export async function deleteAsset(assetId: string, force = false): Promise<DeleteAssetResult> {
-  await requireAdmin();
+  const denied = await adminOnly();
+  if (denied) return denied;
 
   const [tickets, tasks] = await Promise.all([
     db.ticket.count({ where: { assetId } }),
@@ -123,7 +124,7 @@ export async function deleteAsset(assetId: string, force = false): Promise<Delet
 
 /** Vincula o desvincula un ticket de un equipo. */
 export async function updateTicketAsset(ticketId: string, assetId: string | null): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   await db.ticket.update({ where: { id: ticketId }, data: { assetId } });
 

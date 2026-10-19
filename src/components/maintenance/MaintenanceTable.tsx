@@ -31,6 +31,7 @@ import {
   RecordTop,
 } from "@/components/ui/record-list";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 function TwoLineCell({ main, sub, className }: { main: string; sub?: string; className?: string }) {
   return (
@@ -43,6 +44,7 @@ function TwoLineCell({ main, sub, className }: { main: string; sub?: string; cla
 
 export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const [isPending, startTransition] = useTransition();
 
   function handleDelete(task: MaintenanceRow) {
@@ -105,17 +107,19 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                   taskTitle={task.title}
                   done={task.status === "OK" || task.status === "FINISHED"}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => handleDelete(task)}
-                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                >
-                  <Trash2 className="size-4" />
-                  Eliminar
-                </Button>
+                {isAdmin && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => handleDelete(task)}
+                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                  >
+                    <Trash2 className="size-4" />
+                    Eliminar
+                  </Button>
+                )}
               </RecordActions>
             </RecordCard>
           );
@@ -210,17 +214,19 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                             taskTitle={task.title}
                             done={task.status === "OK" || task.status === "FINISHED"}
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Eliminar"
-                            disabled={isPending}
-                            onClick={() => handleDelete(task)}
-                            className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Eliminar"
+                              disabled={isPending}
+                              onClick={() => handleDelete(task)}
+                              className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

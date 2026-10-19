@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/adminAuth";
+import { adminOnly, requireStaff } from "@/lib/adminAuth";
 import { createLicenseSchema, updateLicenseSchema } from "@/lib/validations";
 import type {
   LicenseBilling,
@@ -53,7 +53,7 @@ function toLicenseData(data: LicenseInput) {
 }
 
 export async function createLicense(input: LicenseInput): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = createLicenseSchema.safeParse(input);
   if (!parsed.success) {
@@ -67,7 +67,7 @@ export async function createLicense(input: LicenseInput): Promise<ActionResult> 
 }
 
 export async function updateLicense(licenseId: string, input: LicenseInput): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = updateLicenseSchema.safeParse(input);
   if (!parsed.success) {
@@ -82,7 +82,7 @@ export async function updateLicense(licenseId: string, input: LicenseInput): Pro
 
 /** Atajo para sumar o restar un puesto desde la tabla, sin abrir el formulario. */
 export async function adjustAssignedSeats(licenseId: string, delta: number): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const license = await db.license.findUnique({
     where: { id: licenseId },
@@ -100,7 +100,8 @@ export async function adjustAssignedSeats(licenseId: string, delta: number): Pro
 }
 
 export async function deleteLicense(licenseId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const denied = await adminOnly();
+  if (denied) return denied;
 
   await db.license.delete({ where: { id: licenseId } });
 

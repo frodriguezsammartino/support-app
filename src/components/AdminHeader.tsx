@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { adminLogout } from "@/lib/actions/admin";
+import type { Role } from "@/lib/session";
 
 type Section = { href: string; label: string; short: string; icon: LucideIcon };
 
@@ -45,11 +46,13 @@ function activeSection(pathname: string) {
   return SECTIONS.find((s) => s.href === href) ?? SECTIONS[0];
 }
 
-export function AdminHeader() {
+export function AdminHeader({ role, userLabel }: { role: Role; userLabel: string }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const current = activeSection(pathname);
   const currentHref = activeHref(pathname);
+  // El técnico no ve el dashboard (además la ruta está bloqueada en proxy.ts).
+  const sections = SECTIONS.filter((s) => role === "ADMIN" || s.href !== "/admin/dashboard");
 
   return (
     <header className="border-b border-line bg-white">
@@ -66,6 +69,7 @@ export function AdminHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-ink-muted lg:inline">{userLabel}</span>
           <button
             type="button"
             onClick={() => adminLogout()}
@@ -103,7 +107,7 @@ export function AdminHeader() {
               Panel técnico
             </span>
             <div className="flex items-center">
-              {SECTIONS.map((section) => {
+              {sections.map((section) => {
                 const active = section.href === currentHref;
                 const Icon = section.icon;
                 return (
@@ -151,7 +155,7 @@ export function AdminHeader() {
             </div>
 
             <nav className="flex flex-1 flex-col gap-0.5 p-2">
-              {SECTIONS.map((section) => {
+              {sections.map((section) => {
                 const active = section.href === currentHref;
                 const Icon = section.icon;
                 return (
@@ -174,6 +178,7 @@ export function AdminHeader() {
             </nav>
 
             <div className="border-t border-line p-2">
+              <p className="px-3 pb-1 pt-1 text-xs text-ink-muted">{userLabel}</p>
               <button
                 type="button"
                 onClick={() => adminLogout()}

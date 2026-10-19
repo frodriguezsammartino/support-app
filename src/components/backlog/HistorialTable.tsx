@@ -35,6 +35,7 @@ import {
   RecordTop,
 } from "@/components/ui/record-list";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/components/RoleProvider";
 import type { Category, Ticket } from "@prisma/client";
 
 type TicketRow = Ticket & { category: Category | null };
@@ -47,6 +48,7 @@ export function HistorialTable({
   categories: { id: string; name: string }[];
 }) {
   const [rows, setRows] = useState(tickets);
+  const isAdmin = useIsAdmin();
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [reporterFilter, setReporterFilter] = useState("ALL");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -167,16 +169,18 @@ export function HistorialTable({
                 categories={categories}
                 onReopened={() => setRows((prev) => prev.filter((t) => t.id !== ticket.id))}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(ticket)}
-                className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-              >
-                <Trash2 className="size-4" />
-                Eliminar
-              </Button>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(ticket)}
+                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                >
+                  <Trash2 className="size-4" />
+                  Eliminar
+                </Button>
+              )}
             </RecordActions>
           </RecordCard>
         ))}
@@ -237,15 +241,17 @@ export function HistorialTable({
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDelete(ticket)}
-                        className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleDelete(ticket)}
+                          className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -4,8 +4,13 @@ import { compare } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { adminLoginSchema } from "@/lib/validations";
 import { clearAdminSessionCookie, setAdminSessionCookie } from "@/lib/adminAuth";
+import type { Role } from "@/lib/session";
 
 export type AdminLoginState = { error?: string } | undefined;
+
+function decodeHash(b64: string | undefined) {
+  return b64 ? Buffer.from(b64, "base64").toString("utf8") : null;
+}
 
 export async function adminLogin(_prevState: AdminLoginState, formData: FormData): Promise<AdminLoginState> {
   const parsed = adminLoginSchema.safeParse({ password: formData.get("password") });
@@ -13,18 +18,22 @@ export async function adminLogin(_prevState: AdminLoginState, formData: FormData
     return { error: parsed.error.issues[0]?.message ?? "Contraseña inválida" };
   }
 
-  const hashB64 = process.env.ADMIN_PASSWORD_HASH_B64;
-  if (!hashB64) {
+  const adminHash = decodeHash(process.env.ADMIN_PASSWORD_HASH_B64);
+  if (!adminHash) {
     return { error: "El servidor no tiene configurada la contraseña de admin." };
   }
-  const hash = Buffer.from(hashB64, "base64").toString("utf8");
+  // La del técnico es opcional: si no está configurada, solo entra el admin.
+  const techHash = decodeHash(process.env.TECH_PASSWORD_HASH_B64);
 
-  const isValid = await compare(parsed.data.password, hash);
-  if (!isValid) {
+  let role: Role | null = null;
+  if (await compare(parsed.data.password, adminHash)) role = "ADMIN";
+  else if (techHash && (await compare(parsed.data.password, techHash))) role = "TECH";
+
+  if (!role) {
     return { error: "Contraseña incorrecta." };
   }
 
-  await setAdminSessionCookie();
+  await setAdminSessionCookie(role);
   redirect("/admin");
 }
 

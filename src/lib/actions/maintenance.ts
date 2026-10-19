@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/adminAuth";
+import { adminOnly, requireStaff } from "@/lib/adminAuth";
 import type { RecurrenceInput } from "@/lib/maintenance";
 import {
   completeMaintenanceTaskSchema,
@@ -54,7 +54,7 @@ function revalidateMaintenance(taskId?: string) {
 }
 
 export async function createMaintenanceTask(input: MaintenanceTaskInput): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = createMaintenanceTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -78,7 +78,7 @@ export async function updateMaintenanceTask(
   taskId: string,
   input: MaintenanceTaskInput
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = updateMaintenanceTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -100,7 +100,7 @@ export async function updateMaintenanceTask(
 }
 
 export async function completeMaintenanceTask(taskId: string, note?: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = completeMaintenanceTaskSchema.safeParse({ note });
   if (!parsed.success) {
@@ -131,7 +131,7 @@ export async function addMaintenanceNote(
   note: string,
   at?: Date | null
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const parsed = maintenanceNoteSchema.safeParse({ note, at });
   if (!parsed.success) {
@@ -155,7 +155,8 @@ export async function deleteMaintenanceLogEntry(
   entryId: string,
   taskId: string
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const denied = await adminOnly();
+  if (denied) return denied;
 
   await db.maintenanceCompletion.delete({ where: { id: entryId } });
 
@@ -164,7 +165,8 @@ export async function deleteMaintenanceLogEntry(
 }
 
 export async function deleteMaintenanceTask(taskId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const denied = await adminOnly();
+  if (denied) return denied;
 
   await db.maintenanceTask.delete({ where: { id: taskId } });
 

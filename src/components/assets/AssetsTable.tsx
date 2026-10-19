@@ -46,6 +46,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 export type AssetRow = {
   id: string;
@@ -64,6 +65,7 @@ export type AssetRow = {
 
 export function AssetsTable({ assets }: { assets: AssetRow[] }) {
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
@@ -218,19 +220,21 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                 </RecordField>
               </RecordFields>
 
-              <RecordActions>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => handleDelete(asset)}
-                  className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                >
-                  <Trash2 className="size-4" />
-                  Eliminar
-                </Button>
-              </RecordActions>
+              {isAdmin && (
+                <RecordActions>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => handleDelete(asset)}
+                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                  >
+                    <Trash2 className="size-4" />
+                    Eliminar
+                  </Button>
+                </RecordActions>
+              )}
             </RecordCard>
           );
         })}
@@ -311,17 +315,19 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Eliminar"
-                          disabled={isPending}
-                          onClick={() => handleDelete(asset)}
-                          className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Eliminar"
+                            disabled={isPending}
+                            onClick={() => handleDelete(asset)}
+                            className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
