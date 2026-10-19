@@ -6,7 +6,6 @@ import {
   getPaymentCalendar,
   groupOfKind,
   KIND_ORDER,
-  type LicenseKind,
 } from "@/lib/licenses";
 import { CostByKind, type KindTotals } from "@/components/licenses/CostByKind";
 import { LicensesSummary } from "@/components/licenses/LicensesSummary";
@@ -15,15 +14,30 @@ import { LicenseWizard } from "@/components/licenses/LicenseWizard";
 import { OsInventory } from "@/components/licenses/OsInventory";
 import { PaymentCalendar } from "@/components/licenses/PaymentCalendar";
 import { hasSoftware } from "@/lib/os";
+import { EXPENSE_WINDOW_MONTHS } from "@/lib/requests";
+import { UpgradeExpenses, type UpgradeExpenseRow } from "@/components/licenses/UpgradeExpenses";
+import { getPendingRetireIds } from "@/lib/pendingRetire";
 
 export default async function LicenciasPage() {
-  const [licenses, assets] = await Promise.all([
+  // Ventana del gasto de mejoras: los aprobados de los últimos 12 meses y los pendientes.
+  const expenseSince = new Date();
+  expenseSince.setMonth(expenseSince.getMonth() - EXPENSE_WINDOW_MONTHS);
+
+  const [licenses, upgrades, assets, pendingRetire] = await Promise.all([
     db.license.findMany({ orderBy: { code: "asc" } }),
+    db.request.findMany({
+      where: {
+        kind: "UPGRADE",
+        OR: [{ status: "PENDING" }, { status: "APPROVED", decidedAt: { gte: expenseSince } }],
+      },
+      orderBy: { createdAt: "desc" },
+    }),
     // El software instalado sale del inventario de equipos: no se carga dos veces.
     db.asset.findMany({
       where: { type: { in: ["PC", "NOTEBOOK", "SERVER"] } },
       select: { type: true, location: true, os: true, office: true },
     }),
+    getPendingRetireIds(),
   ]);
   const softwareAssets = assets.filter((a) => hasSoftware(a.type));
 
@@ -83,6 +97,30 @@ export default async function LicenciasPage() {
     return acc;
   }, {} as KindTotals);
 
+  // Mejoras y repuestos: lo aprobado suma por moneda; lo pendiente se muestra pero no suma.
+  const upgradeRows: UpgradeExpenseRow[] = upgrades.map((r) => ({
+    id: r.id,
+    number: r.number,
+    assetId: r.assetId,
+    targetLabel: r.targetLabel,
+    title: r.title,
+    component: r.component,
+    requestedBy: r.requestedBy,
+    status: r.status === "APPROVED" ? "APPROVED" : "PENDING",
+    costCents: r.costCents,
+    estimatedCostCents: r.estimatedCostCents,
+    currency: r.currency,
+    at: r.status === "APPROVED" ? (r.decidedAt ?? r.createdAt) : r.createdAt,
+  }));
+  const upgradeTotals = upgradeRows
+    .filter((r) => r.status === "APPROVED" && r.costCents)
+    .reduce<Record<string, number>>((acc, r) => {
+      acc[r.currency] = (acc[r.currency] ?? 0) + (r.costCents ?? 0);
+      return acc;
+    }, {});
+  // Una moneda puede aparecer solo en mejoras: el desglose tiene que mostrarla igual.
+  const costCurrencies = Array.from(new Set([...currencies, ...Object.keys(upgradeTotals)])).sort();
+
   const toRows = (totals: Record<string, number>) =>
     currencies.map((currency) => ({ currency, cents: totals[currency] ?? 0 }));
 
@@ -101,14 +139,17 @@ export default async function LicenciasPage() {
       <LicensesTable
         group="LICENSE"
         licenses={licenseRows}
+        retirePendingIds={pendingRetire.licenses}
         action={<LicenseWizard group="LICENSE" />}
       />
       <LicensesTable
         group="SERVICE"
         licenses={serviceRows}
+        retirePendingIds={pendingRetire.licenses}
         action={<LicenseWizard group="SERVICE" />}
       />
-      <CostByKind totals={annualByKind} currencies={currencies} />
+      <UpgradeExpenses rows={upgradeRows} totals={upgradeTotals} />
+      <CostByKind totals={annualByKind} currencies={costCurrencies} upgrades={upgradeTotals} />
       <PaymentCalendar months={calendar} />
       <OsInventory assets={softwareAssets} />
     </div>

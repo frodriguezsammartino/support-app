@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Trash2 } from "lucide-react";
+
 import { toast } from "sonner";
 import { deleteAsset } from "@/lib/actions/assets";
 import {
@@ -44,9 +44,9 @@ import {
   RecordTop,
 } from "@/components/ui/record-list";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsAdmin } from "@/components/RoleProvider";
+import { RetireControl, RetirePendingBadge } from "@/components/requests/RetireControl";
 import { OFFICE_CATALOG, OS_CATALOG, SUPPORT_META, getSupportState } from "@/lib/os";
 
 export type AssetRow = {
@@ -85,14 +85,18 @@ export function AssetsTable({
   assets,
   initialOs = "ALL",
   initialOffice = "ALL",
+  retirePendingIds = [],
 }: {
   assets: AssetRow[];
+  /** Equipos con una baja pedida que el admin todavía no resolvió. */
+  retirePendingIds?: string[];
   /** Llegar desde el panel de licencias ya filtrado por un sistema operativo. */
   initialOs?: string;
   initialOffice?: string;
 }) {
   const router = useRouter();
   const isAdmin = useIsAdmin();
+  const retirePending = useMemo(() => new Set(retirePendingIds), [retirePendingIds]);
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
@@ -312,19 +316,22 @@ export function AssetsTable({
                 </RecordField>
               </RecordFields>
 
-              {isAdmin && (
+              {retirePending.has(asset.id) && (
+                <p className="mt-2">
+                  <RetirePendingBadge show />
+                </p>
+              )}
+              {(isAdmin || !retirePending.has(asset.id)) && (
                 <RecordActions>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                  <RetireControl
+                    target="ASSET"
+                    id={asset.id}
+                    name={asset.name}
+                    variant="button"
+                    pending={retirePending.has(asset.id)}
                     disabled={isPending}
-                    onClick={() => handleDelete(asset)}
-                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                  >
-                    <Trash2 className="size-4" />
-                    Eliminar
-                  </Button>
+                    onDelete={() => handleDelete(asset)}
+                  />
                 </RecordActions>
               )}
             </RecordCard>
@@ -376,6 +383,11 @@ export function AssetsTable({
                           </p>
                         )}
                         <SoftwareLine os={asset.os} office={asset.office} />
+                        {retirePending.has(asset.id) && (
+                          <p className="mt-1">
+                            <RetirePendingBadge show />
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-ink-muted">{ASSET_TYPE_SHORT[asset.type]}</TableCell>
                       <TableCell>
@@ -408,19 +420,15 @@ export function AssetsTable({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {isAdmin && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Eliminar"
-                            disabled={isPending}
-                            onClick={() => handleDelete(asset)}
-                            className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        )}
+                        <RetireControl
+                          target="ASSET"
+                          id={asset.id}
+                          name={asset.name}
+                          variant="icon"
+                          pending={retirePending.has(asset.id)}
+                          disabled={isPending}
+                          onDelete={() => handleDelete(asset)}
+                        />
                       </TableCell>
                     </TableRow>
                   );

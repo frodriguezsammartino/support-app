@@ -135,6 +135,7 @@ model MaintenanceTask {
   updatedAt       DateTime  @updatedAt
 
   completions MaintenanceCompletion[]
+  requests    Request[]
 
   @@index([assetId])
 }
@@ -203,6 +204,7 @@ model Asset {
 
   tickets          Ticket[]
   maintenanceTasks MaintenanceTask[]
+  requests         Request[]
 
   @@index([status])
   @@index([type])
@@ -273,5 +275,63 @@ model License {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  requests Request[]
+
   @@index([status])
+}
+
+enum RequestKind {
+  /// El técnico pide dar de baja un equipo, licencia/servicio o tarea periódica.
+  RETIRE
+  /// El técnico pide una mejora de un equipo (RAM, disco, fuente, cooler...).
+  UPGRADE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Una solicitud del técnico al administrador. El técnico no borra nada ni gasta
+/// plata por su cuenta: pide, y el admin decide. Una mejora aprobada con costo es
+/// el gasto de mantenimiento que se ve en el panel de Licencias y Servicios.
+model Request {
+  id     String        @id @default(cuid())
+  number Int           @unique @default(autoincrement())
+  kind   RequestKind
+  status RequestStatus @default(PENDING)
+
+  /// A qué se refiere. SetNull: si después se borra el objeto, la solicitud queda
+  /// como historial gracias a targetLabel.
+  assetId   String?
+  asset     Asset?           @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  licenseId String?
+  license   License?         @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+  taskId    String?
+  task      MaintenanceTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  /// Nombre del objeto al momento de pedir.
+  targetLabel String
+
+  title     String
+  /// RAM | DISCO | FUENTE | COOLER | OTRO. Solo para UPGRADE.
+  component String?
+  reason    String
+
+  /// Lo que estima el técnico (opcional) y lo que fija el admin al aprobar.
+  estimatedCostCents Int?
+  costCents          Int?
+  currency           String @default("ARS")
+
+  requestedBy  String
+  createdAt    DateTime  @default(now())
+  /// Cuándo se resolvió. Para una mejora aprobada es la fecha del gasto.
+  decidedAt    DateTime?
+  decisionNote String?
+
+  @@index([status])
+  @@index([kind, status])
+  @@index([assetId])
+  @@index([licenseId])
+  @@index([taskId])
 }

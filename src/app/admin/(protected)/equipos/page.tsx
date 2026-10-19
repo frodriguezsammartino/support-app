@@ -3,6 +3,7 @@ import { getWarrantyState } from "@/lib/assets";
 import { AssetsTable, type AssetRow } from "@/components/assets/AssetsTable";
 import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
 import { KpiCard } from "@/components/charts/KpiCard";
+import { getPendingRetireIds } from "@/lib/pendingRetire";
 
 export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
   const searchParams = await props.searchParams;
@@ -10,12 +11,15 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
   const initialOs = typeof searchParams?.os === "string" ? searchParams.os : "ALL";
   const initialOffice = typeof searchParams?.office === "string" ? searchParams.office : "ALL";
 
-  const assets = await db.asset.findMany({
-    orderBy: { code: "asc" },
-    include: {
-      tickets: { select: { status: true } },
-    },
-  });
+  const [assets, pendingRetire] = await Promise.all([
+    db.asset.findMany({
+      orderBy: { code: "asc" },
+      include: {
+        tickets: { select: { status: true } },
+      },
+    }),
+    getPendingRetireIds(),
+  ]);
 
   const rows: AssetRow[] = assets.map((asset) => ({
     id: asset.id,
@@ -60,6 +64,7 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
         assets={rows}
         initialOs={initialOs}
         initialOffice={initialOffice}
+        retirePendingIds={pendingRetire.assets}
       />
     </div>
   );

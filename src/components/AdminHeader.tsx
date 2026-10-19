@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Home,
+  Inbox,
   KeyRound,
   LogOut,
   Menu,
@@ -29,12 +30,21 @@ const SECTIONS: Section[] = [
   { href: "/admin/dashboard", label: "Dashboard", short: "Dashboard", icon: BarChart3 },
 ];
 
+/** No es una pestaña (el orden de las pestañas es fijo): se llega desde el header. */
+const REQUESTS: Section = {
+  href: "/admin/solicitudes",
+  label: "Solicitudes",
+  short: "Solicitudes",
+  icon: Inbox,
+};
+
 /**
  * Cuál sección está activa. "/admin" es prefijo de todas las demás, así que se
  * busca de más específico a más general y gana el primero que matchea; si no,
  * cualquier subruta marcaría también la pestaña de Tareas.
  */
 function activeHref(pathname: string) {
+  if (pathname === REQUESTS.href) return REQUESTS.href;
   const match = [...SECTIONS]
     .sort((a, b) => b.href.length - a.href.length)
     .find((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
@@ -43,10 +53,18 @@ function activeHref(pathname: string) {
 
 function activeSection(pathname: string) {
   const href = activeHref(pathname);
-  return SECTIONS.find((s) => s.href === href) ?? SECTIONS[0];
+  return [...SECTIONS, REQUESTS].find((s) => s.href === href) ?? SECTIONS[0];
 }
 
-export function AdminHeader({ role, userLabel }: { role: Role; userLabel: string }) {
+export function AdminHeader({
+  role,
+  userLabel,
+  pendingRequests,
+}: {
+  role: Role;
+  userLabel: string;
+  pendingRequests: number;
+}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const current = activeSection(pathname);
@@ -69,6 +87,23 @@ export function AdminHeader({ role, userLabel }: { role: Role; userLabel: string
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link
+            href={REQUESTS.href}
+            aria-current={currentHref === REQUESTS.href ? "page" : undefined}
+            className={`hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:inline-flex ${
+              currentHref === REQUESTS.href
+                ? "bg-brand-tint text-brand"
+                : "text-ink-muted hover:bg-brand-tint hover:text-brand"
+            }`}
+          >
+            <Inbox className="size-4" />
+            Solicitudes
+            {pendingRequests > 0 && (
+              <span className="rounded-full bg-[#FEF3C7] px-1.5 text-xs font-semibold text-[#92400E]">
+                {pendingRequests}
+              </span>
+            )}
+          </Link>
           <span className="hidden text-sm text-ink-muted lg:inline">{userLabel}</span>
           <button
             type="button"
@@ -178,7 +213,25 @@ export function AdminHeader({ role, userLabel }: { role: Role; userLabel: string
             </nav>
 
             <div className="border-t border-line p-2">
-              <p className="px-3 pb-1 pt-1 text-xs text-ink-muted">{userLabel}</p>
+              <Link
+                href={REQUESTS.href}
+                aria-current={currentHref === REQUESTS.href ? "page" : undefined}
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-3 border-l-[3px] px-3 py-2.5 text-sm transition-colors ${
+                  currentHref === REQUESTS.href
+                    ? "border-brand bg-brand-tint font-semibold text-brand"
+                    : "border-transparent text-ink hover:bg-brand-tint/60"
+                }`}
+              >
+                <Inbox className="size-4 shrink-0" />
+                Solicitudes
+                {pendingRequests > 0 && (
+                  <span className="rounded-full bg-[#FEF3C7] px-1.5 text-xs font-semibold text-[#92400E]">
+                    {pendingRequests}
+                  </span>
+                )}
+              </Link>
+              <p className="px-3 pb-1 pt-2 text-xs text-ink-muted">{userLabel}</p>
               <button
                 type="button"
                 onClick={() => adminLogout()}

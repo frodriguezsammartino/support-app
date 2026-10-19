@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { AlertTriangle, ExternalLink, Minus, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, Minus, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { adjustAssignedSeats, deleteLicense } from "@/lib/actions/licenses";
 import {
@@ -54,7 +54,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useIsAdmin } from "@/components/RoleProvider";
+import { RetireControl, RetirePendingBadge } from "@/components/requests/RetireControl";
 
 export type LicenseRow = EditableLicense & { code: number };
 
@@ -92,8 +92,11 @@ export function LicensesTable({
   licenses,
   group,
   action,
+  retirePendingIds = [],
 }: {
   licenses: LicenseRow[];
+  /** Licencias o servicios con una baja pedida que el admin todavía no resolvió. */
+  retirePendingIds?: string[];
   group: LicenseGroup;
   /** El botón de "Nueva ...", que vive junto al título de cada tabla. */
   action?: React.ReactNode;
@@ -101,7 +104,7 @@ export function LicensesTable({
   const copy = GROUP_COPY[group];
   const showSeats = group === "LICENSE";
   const router = useRouter();
-  const isAdmin = useIsAdmin();
+  const retirePending = useMemo(() => new Set(retirePendingIds), [retirePendingIds]);
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
@@ -210,6 +213,11 @@ export function LicensesTable({
                 </span>
                 <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
               </RecordTop>
+              {retirePending.has(license.id) && (
+                <p className="mt-1">
+                  <RetirePendingBadge show />
+                </p>
+              )}
               <p className="mt-0.5 text-xs text-ink-muted">
                 {KIND_SHORT[license.kind]}
                 {license.vendor && ` · ${license.vendor}`}
@@ -289,22 +297,18 @@ export function LicensesTable({
 
               <RecordActions>
                 <EditLicenseDialog license={license} />
-                {isAdmin && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => {
-                      if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
-                      run(() => deleteLicense(license.id));
-                    }}
-                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                  >
-                    <Trash2 className="size-4" />
-                    Eliminar
-                  </Button>
-                )}
+                <RetireControl
+                  target="LICENSE"
+                  id={license.id}
+                  name={license.name}
+                  variant="button"
+                  pending={retirePending.has(license.id)}
+                  disabled={isPending}
+                  onDelete={() => {
+                    if (!confirm(`¿Eliminar "${license.name}"?`)) return;
+                    run(() => deleteLicense(license.id));
+                  }}
+                />
               </RecordActions>
             </RecordCard>
           );
@@ -350,6 +354,11 @@ export function LicensesTable({
                           {KIND_SHORT[license.kind]}
                           {license.vendor && ` · ${license.vendor}`}
                         </p>
+                        {retirePending.has(license.id) && (
+                          <p className="mt-1">
+                            <RetirePendingBadge show />
+                          </p>
+                        )}
                       </TableCell>
 
                       {showSeats && (
@@ -440,22 +449,18 @@ export function LicensesTable({
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           <EditLicenseDialog license={license} />
-                          {isAdmin && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Eliminar"
-                              disabled={isPending}
-                              onClick={() => {
-                                if (!confirm(`¿Eliminar la licencia "${license.name}"?`)) return;
-                                run(() => deleteLicense(license.id));
-                              }}
-                              className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          )}
+                          <RetireControl
+                            target="LICENSE"
+                            id={license.id}
+                            name={license.name}
+                            variant="icon"
+                            pending={retirePending.has(license.id)}
+                            disabled={isPending}
+                            onDelete={() => {
+                              if (!confirm(`¿Eliminar "${license.name}"?`)) return;
+                              run(() => deleteLicense(license.id));
+                            }}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

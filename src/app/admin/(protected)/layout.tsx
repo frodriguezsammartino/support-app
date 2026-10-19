@@ -1,6 +1,7 @@
 import { AdminHeader } from "@/components/AdminHeader";
 import { RoleProvider } from "@/components/RoleProvider";
 import { TECH_NAME, requireStaff } from "@/lib/adminAuth";
+import { db } from "@/lib/db";
 
 // El panel muestra siempre el estado real de la base: si Next prerenderiza estas
 // rutas en el build, Vercel sirve el HTML congelado del deploy y los cambios
@@ -10,11 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminProtectedLayout({ children }: LayoutProps<"/admin">) {
   const role = await requireStaff();
   const userLabel = role === "TECH" ? `Técnico · ${TECH_NAME}` : "Administrador";
+  const pendingRequests = await db.request.count({ where: { status: "PENDING" } });
 
   return (
     <RoleProvider role={role}>
       <div className="flex flex-1 flex-col bg-background">
-        <AdminHeader role={role} userLabel={userLabel} />
+        <AdminHeader role={role} userLabel={userLabel} pendingRequests={pendingRequests} />
         <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</div>
       </div>
     </RoleProvider>

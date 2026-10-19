@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteMaintenanceTask } from "@/lib/actions/maintenance";
 import { describeRecurrence, MAINTENANCE_STATUS_META, type MaintenanceRow } from "@/lib/maintenance";
@@ -30,8 +29,7 @@ import {
   RecordFields,
   RecordTop,
 } from "@/components/ui/record-list";
-import { Button } from "@/components/ui/button";
-import { useIsAdmin } from "@/components/RoleProvider";
+import { RetireControl, RetirePendingBadge } from "@/components/requests/RetireControl";
 
 function TwoLineCell({ main, sub, className }: { main: string; sub?: string; className?: string }) {
   return (
@@ -42,9 +40,16 @@ function TwoLineCell({ main, sub, className }: { main: string; sub?: string; cla
   );
 }
 
-export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
+export function MaintenanceTable({
+  rows,
+  retirePendingIds = [],
+}: {
+  rows: MaintenanceRow[];
+  /** Tareas con una baja pedida que el admin todavía no resolvió. */
+  retirePendingIds?: string[];
+}) {
   const router = useRouter();
-  const isAdmin = useIsAdmin();
+  const retirePending = new Set(retirePendingIds);
   const [isPending, startTransition] = useTransition();
 
   function handleDelete(task: MaintenanceRow) {
@@ -74,6 +79,11 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                 </Link>
                 <MaintenanceStatusBadge status={task.status} />
               </RecordTop>
+              {retirePending.has(task.id) && (
+                <p className="mt-1">
+                  <RetirePendingBadge show />
+                </p>
+              )}
 
               <RecordFields>
                 {task.asset && (
@@ -107,19 +117,15 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                   taskTitle={task.title}
                   done={task.status === "OK" || task.status === "FINISHED"}
                 />
-                {isAdmin && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => handleDelete(task)}
-                    className="text-[#991B1B] hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                  >
-                    <Trash2 className="size-4" />
-                    Eliminar
-                  </Button>
-                )}
+                <RetireControl
+                  target="TASK"
+                  id={task.id}
+                  name={task.title}
+                  variant="button"
+                  pending={retirePending.has(task.id)}
+                  disabled={isPending}
+                  onDelete={() => handleDelete(task)}
+                />
               </RecordActions>
             </RecordCard>
           );
@@ -168,6 +174,11 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                         {task.description && (
                           <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{task.description}</p>
                         )}
+                        {retirePending.has(task.id) && (
+                          <p className="mt-1">
+                            <RetirePendingBadge show />
+                          </p>
+                        )}
                       </TableCell>
 
                       <TableCell>
@@ -214,19 +225,15 @@ export function MaintenanceTable({ rows }: { rows: MaintenanceRow[] }) {
                             taskTitle={task.title}
                             done={task.status === "OK" || task.status === "FINISHED"}
                           />
-                          {isAdmin && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Eliminar"
-                              disabled={isPending}
-                              onClick={() => handleDelete(task)}
-                              className="text-slate-400 hover:bg-[#FEE2E2] hover:text-[#991B1B]"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          )}
+                          <RetireControl
+                            target="TASK"
+                            id={task.id}
+                            name={task.title}
+                            variant="icon"
+                            pending={retirePending.has(task.id)}
+                            disabled={isPending}
+                            onDelete={() => handleDelete(task)}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

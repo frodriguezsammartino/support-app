@@ -19,20 +19,29 @@ export type KindTotals = Record<LicenseKind, Record<string, number>>;
 export function CostByKind({
   totals,
   currencies,
+  upgrades = {},
 }: {
   totals: KindTotals;
   currencies: string[];
+  /**
+   * Mejoras y repuestos aprobados en los últimos 12 meses, por moneda. A diferencia
+   * del resto es plata ya gastada y no se repite sola, pero entra en el total para
+   * ver el costo completo de sistemas.
+   */
+  upgrades?: Record<string, number>;
 }) {
   const rows = KIND_ORDER.filter((kind) =>
     currencies.some((currency) => (totals[kind]?.[currency] ?? 0) > 0)
   );
+  const hasUpgrades = currencies.some((currency) => (upgrades[currency] ?? 0) > 0);
 
-  if (rows.length === 0 || currencies.length === 0) return null;
+  if ((rows.length === 0 && !hasUpgrades) || currencies.length === 0) return null;
 
   const grand = Object.fromEntries(
     currencies.map((currency) => [
       currency,
-      KIND_ORDER.reduce((sum, kind) => sum + (totals[kind]?.[currency] ?? 0), 0),
+      KIND_ORDER.reduce((sum, kind) => sum + (totals[kind]?.[currency] ?? 0), 0) +
+        (upgrades[currency] ?? 0),
     ])
   );
 
@@ -72,6 +81,25 @@ export function CostByKind({
                 })}
               </TableRow>
             ))}
+
+            {hasUpgrades && (
+              <TableRow>
+                <TableCell className="text-ink">
+                  Mejoras y repuestos
+                  <span className="block text-xs text-slate-400">
+                    últimos 12 meses · gasto ya realizado, no se repite solo
+                  </span>
+                </TableCell>
+                {currencies.map((currency) => {
+                  const cents = upgrades[currency] ?? 0;
+                  return (
+                    <TableCell key={currency} className="text-right tabular-nums">
+                      {cents > 0 ? formatAmount(cents) : <span className="text-slate-300">—</span>}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            )}
 
             <TableRow className="bg-slate-50">
               <TableCell className="font-semibold text-ink">Total</TableCell>

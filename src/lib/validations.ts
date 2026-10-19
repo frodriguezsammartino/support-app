@@ -144,3 +144,27 @@ export const createLicenseSchema = z.object({
 });
 
 export const updateLicenseSchema = createLicenseSchema;
+
+export const retireRequestSchema = z.object({
+  target: z.enum(["ASSET", "LICENSE", "TASK"]),
+  id: z.string().min(1),
+  reason: z.string().trim().min(3, "Contá en pocas palabras por qué hay que darlo de baja").max(1000),
+});
+
+export const upgradeRequestSchema = z.object({
+  assetId: z.string().min(1, "Elegí el equipo"),
+  component: z.enum(["RAM", "DISCO", "FUENTE", "COOLER", "OTRO"]),
+  title: z.string().trim().min(3, "Contá qué hay que cambiar o ampliar").max(150),
+  reason: z.string().trim().min(3, "Contá por qué hace falta (ej: la PC anda lenta)").max(1000),
+  estimatedCostCents: z.coerce.number().int().min(0).nullable().optional(),
+  currency: z.enum(["ARS", "USD"]),
+});
+
+export const resolveRequestSchema = z.object({
+  id: z.string().min(1),
+  decision: z.enum(["APPROVE", "REJECT"]),
+  costCents: z.coerce.number().int().min(0).nullable().optional(),
+  currency: z.enum(["ARS", "USD"]).optional(),
+  note: optionalText(1000),
+  createTicket: z.boolean().optional(),
+});

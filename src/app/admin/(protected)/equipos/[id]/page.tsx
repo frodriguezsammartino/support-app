@@ -13,7 +13,17 @@ import {
 } from "@/lib/assets";
 import { describeRecurrence, getNextDueAt } from "@/lib/maintenance";
 import { STATUS_LABELS } from "@/lib/priority";
+import { formatAmount } from "@/lib/licenses";
+import { KIND_META, STATUS_META as REQUEST_STATUS_META } from "@/lib/requests";
+import {
+  OFFICE_CATALOG,
+  OS_CATALOG,
+  SUPPORT_META,
+  getSupportState,
+  hasSoftware,
+} from "@/lib/os";
 import { EditAssetDialog } from "@/components/assets/EditAssetDialog";
+import { RequestUpgradeDialog } from "@/components/requests/RequestUpgradeDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -56,6 +66,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
       maintenanceTasks: {
         include: { completions: { orderBy: { completedAt: "desc" }, take: 50 } },
       },
+      requests: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -64,6 +75,16 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
   const statusMeta = ASSET_STATUS_META[asset.status];
   const warrantyMeta = WARRANTY_META[getWarrantyState(asset.warrantyUntil)];
   const openTickets = asset.tickets.filter((t) => t.status !== "COMPLETED");
+
+  // Lo que se gastó en mejoras de este equipo, por moneda (nunca se suman monedas distintas).
+  const upgradeSpend = asset.requests
+    .filter((r) => r.kind === "UPGRADE" && r.status === "APPROVED" && r.costCents)
+    .reduce<Record<string, number>>((acc, r) => {
+      acc[r.currency] = (acc[r.currency] ?? 0) + (r.costCents ?? 0);
+      return acc;
+    }, {});
+  const osState = getSupportState(asset.os, OS_CATALOG);
+  const officeState = getSupportState(asset.office, OFFICE_CATALOG);
 
   // Una sola línea de tiempo con todo lo que le pasó al equipo.
   const history: HistoryEntry[] = [
@@ -115,6 +136,24 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               label="Marca y modelo"
               value={[asset.brand, asset.model].filter(Boolean).join(" ") || "—"}
             />
+            {hasSoftware(asset.type) && (
+              <>
+                <div className="rounded-lg border bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-ink-muted">Sistema operativo</p>
+                  <p className="text-sm font-medium">{asset.os ?? "—"}</p>
+                  {osState === "ENDED" && (
+                    <p className={`text-xs ${SUPPORT_META.ENDED.textClass}`}>Sin soporte</p>
+                  )}
+                </div>
+                <div className="rounded-lg border bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-ink-muted">Ofimática</p>
+                  <p className="text-sm font-medium">{asset.office ?? "—"}</p>
+                  {officeState === "ENDED" && (
+                    <p className={`text-xs ${SUPPORT_META.ENDED.textClass}`}>Sin soporte</p>
+                  )}
+                </div>
+              </>
+            )}
             <Field label="Número de serie" value={asset.serialNumber ?? "—"} />
             <Field
               label="Compra"
@@ -144,6 +183,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               openTickets={unassignedTickets}
               hasOpenTicket={openTickets.length > 0}
             />
+            <RequestUpgradeDialog assetId={asset.id} assetName={asset.name} />
             <span className="text-sm text-ink-muted">
               {asset.tickets.length} ticket{asset.tickets.length === 1 ? "" : "s"} en total
               {openTickets.length > 0 && (
@@ -156,6 +196,48 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
           </div>
         </CardContent>
       </Card>
+
+      {asset.requests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <CardTitle className="text-base">Solicitudes de este equipo</CardTitle>
+              {Object.keys(upgradeSpend).length > 0 && (
+                <span className="text-sm text-ink-muted">
+                  Gastado en mejoras:{" "}
+                  <span className="font-medium text-ink">
+                    {Object.entries(upgradeSpend)
+                      .map(([currency, cents]) => `${currency} ${formatAmount(cents)}`)
+                      .join(" · ")}
+                  </span>
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {asset.requests.map((r) => (
+              <div key={r.id} className="flex flex-col gap-1 rounded-lg border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={KIND_META[r.kind].badgeClass}>{KIND_META[r.kind].label}</Badge>
+                  <Badge className={REQUEST_STATUS_META[r.status].badgeClass}>
+                    {REQUEST_STATUS_META[r.status].label}
+                  </Badge>
+                  <span className="text-sm font-medium">{r.title}</span>
+                </div>
+                <p className="text-sm text-ink-muted">{r.reason}</p>
+                <p className="text-xs text-slate-400">
+                  Pidió {r.requestedBy} el {format(r.createdAt, "dd/MM/yyyy")}
+                  {r.status === "APPROVED" && r.costCents
+                    ? ` · costo ${r.currency} ${formatAmount(r.costCents)}`
+                    : r.status === "PENDING" && r.estimatedCostCents
+                      ? ` · estimado ${r.currency} ${formatAmount(r.estimatedCostCents)}`
+                      : ""}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {asset.maintenanceTasks.length > 0 && (
         <Card>

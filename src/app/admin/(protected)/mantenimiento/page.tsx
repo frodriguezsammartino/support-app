@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { toMaintenanceRow } from "@/lib/maintenance";
+import { getPendingRetireIds } from "@/lib/pendingRetire";
 import { MaintenanceSummary } from "@/components/maintenance/MaintenanceSummary";
 import { MaintenanceTable } from "@/components/maintenance/MaintenanceTable";
 import { NewMaintenanceTaskDialog } from "@/components/maintenance/NewMaintenanceTaskDialog";
 
 export default async function MantenimientoPage() {
-  const [tasks, assets] = await Promise.all([
+  const [tasks, assets, pendingRetire] = await Promise.all([
     db.maintenanceTask.findMany({
       include: {
         _count: { select: { completions: { where: { kind: "DONE" } } } },
@@ -16,6 +17,7 @@ export default async function MantenimientoPage() {
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),
+    getPendingRetireIds(),
   ]);
 
   const rows = tasks.map((task) => toMaintenanceRow(task, task._count.completions));
@@ -30,7 +32,7 @@ export default async function MantenimientoPage() {
       </div>
 
       <MaintenanceSummary rows={rows} />
-      <MaintenanceTable rows={sorted} />
+      <MaintenanceTable rows={sorted} retirePendingIds={pendingRetire.tasks} />
     </div>
   );
 }
