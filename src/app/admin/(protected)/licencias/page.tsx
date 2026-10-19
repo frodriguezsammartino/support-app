@@ -12,10 +12,20 @@ import { CostByKind, type KindTotals } from "@/components/licenses/CostByKind";
 import { LicensesSummary } from "@/components/licenses/LicensesSummary";
 import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTable";
 import { LicenseWizard } from "@/components/licenses/LicenseWizard";
+import { OsInventory } from "@/components/licenses/OsInventory";
 import { PaymentCalendar } from "@/components/licenses/PaymentCalendar";
+import { hasSoftware } from "@/lib/os";
 
 export default async function LicenciasPage() {
-  const licenses = await db.license.findMany({ orderBy: { code: "asc" } });
+  const [licenses, assets] = await Promise.all([
+    db.license.findMany({ orderBy: { code: "asc" } }),
+    // El software instalado sale del inventario de equipos: no se carga dos veces.
+    db.asset.findMany({
+      where: { type: { in: ["PC", "NOTEBOOK", "SERVER"] } },
+      select: { type: true, location: true, os: true, office: true },
+    }),
+  ]);
+  const softwareAssets = assets.filter((a) => hasSoftware(a.type));
 
   const rows: LicenseRow[] = licenses.map((l) => ({
     id: l.id,
@@ -100,6 +110,7 @@ export default async function LicenciasPage() {
       />
       <CostByKind totals={annualByKind} currencies={currencies} />
       <PaymentCalendar months={calendar} />
+      <OsInventory assets={softwareAssets} />
     </div>
   );
 }

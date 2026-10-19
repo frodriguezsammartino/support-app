@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { adminOnly, requireStaff } from "@/lib/adminAuth";
 import { createAssetSchema, updateAssetSchema } from "@/lib/validations";
 import type { AssetStatus, AssetType } from "@/lib/assets";
+import { hasSoftware } from "@/lib/os";
 
 export type ActionResult = { error?: string };
 
@@ -17,6 +18,8 @@ export type AssetInput = {
   serialNumber?: string | null;
   location?: string | null;
   owner?: string | null;
+  os?: string | null;
+  office?: string | null;
   purchasedAt?: Date | null;
   warrantyUntil?: Date | null;
   notes?: string | null;
@@ -26,6 +29,8 @@ function revalidateAssets(assetId?: string) {
   revalidatePath("/admin/equipos");
   if (assetId) revalidatePath(`/admin/equipos/${assetId}`);
   revalidatePath("/admin/dashboard");
+  // El panel de licencias cuenta los sistemas operativos desde el inventario.
+  revalidatePath("/admin/licencias");
 }
 
 /** Los campos de texto vacíos se guardan como null, no como "". */
@@ -39,6 +44,9 @@ function toAssetData(data: AssetInput) {
     serialNumber: data.serialNumber || null,
     location: data.location || null,
     owner: data.owner || null,
+    // Una impresora o un UPS no tienen sistema instalado: si se cambió el tipo, no se arrastra.
+    os: hasSoftware(data.type) ? data.os || null : null,
+    office: hasSoftware(data.type) ? data.office || null : null,
     purchasedAt: data.purchasedAt ?? null,
     warrantyUntil: data.warrantyUntil ?? null,
     notes: data.notes || null,

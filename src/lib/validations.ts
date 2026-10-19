@@ -103,6 +103,8 @@ export const createAssetSchema = z.object({
   serialNumber: optionalText(120),
   location: optionalText(120),
   owner: optionalText(120),
+  os: optionalText(80),
+  office: optionalText(80),
   purchasedAt: z.coerce.date().nullable().optional(),
   warrantyUntil: z.coerce.date().nullable().optional(),
   notes: optionalText(4000),

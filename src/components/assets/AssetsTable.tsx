@@ -47,6 +47,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsAdmin } from "@/components/RoleProvider";
+import { OFFICE_CATALOG, OS_CATALOG, SUPPORT_META, getSupportState } from "@/lib/os";
 
 export type AssetRow = {
   id: string;
@@ -58,30 +59,70 @@ export type AssetRow = {
   model: string | null;
   location: string | null;
   owner: string | null;
+  os: string | null;
+  office: string | null;
   warrantyUntil: Date | null;
   openTickets: number;
   totalTickets: number;
 };
 
-export function AssetsTable({ assets }: { assets: AssetRow[] }) {
+/** Sistema operativo y ofimática en una línea, con rojo si alguno ya no tiene soporte. */
+function SoftwareLine({ os, office }: { os: string | null; office: string | null }) {
+  if (!os && !office) return null;
+  const ended =
+    getSupportState(os, OS_CATALOG) === "ENDED" || getSupportState(office, OFFICE_CATALOG) === "ENDED";
+  return (
+    <p className={`mt-0.5 text-xs ${ended ? SUPPORT_META.ENDED.textClass : "text-ink-muted"}`}>
+      {[os, office].filter(Boolean).join(" · ")}
+      {ended && " (sin soporte)"}
+    </p>
+  );
+}
+
+const NO_DATA = "__NO_DATA__";
+
+export function AssetsTable({
+  assets,
+  initialOs = "ALL",
+  initialOffice = "ALL",
+}: {
+  assets: AssetRow[];
+  /** Llegar desde el panel de licencias ya filtrado por un sistema operativo. */
+  initialOs?: string;
+  initialOffice?: string;
+}) {
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [osFilter, setOsFilter] = useState<string>(initialOs);
+  const [officeFilter, setOfficeFilter] = useState<string>(initialOffice);
+
+  // Solo se ofrecen los sistemas que realmente hay cargados.
+  const osOptions = useMemo(
+    () => Array.from(new Set(assets.map((a) => a.os).filter((v): v is string => !!v))).sort(),
+    [assets]
+  );
+  const officeOptions = useMemo(
+    () => Array.from(new Set(assets.map((a) => a.office).filter((v): v is string => !!v))).sort(),
+    [assets]
+  );
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return assets.filter((a) => {
       if (typeFilter !== "ALL" && a.type !== typeFilter) return false;
       if (statusFilter !== "ALL" && a.status !== statusFilter) return false;
+      if (osFilter === NO_DATA ? !!a.os : osFilter !== "ALL" && a.os !== osFilter) return false;
+      if (officeFilter === NO_DATA ? !!a.office : officeFilter !== "ALL" && a.office !== officeFilter) return false;
       if (!needle) return true;
-      return [a.name, a.location, a.brand, a.model, `#${a.code}`]
+      return [a.name, a.location, a.brand, a.model, a.os, a.office, `#${a.code}`]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(needle));
     });
-  }, [assets, search, typeFilter, statusFilter]);
+  }, [assets, search, typeFilter, statusFilter, osFilter, officeFilter]);
 
   function handleDelete(asset: AssetRow) {
     if (!confirm(`¿Eliminar "${asset.name}" del inventario?`)) return;
@@ -132,7 +173,7 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
           <span className="text-xs text-ink-muted">Buscar</span>
           <Input
             className="h-9 w-56"
-            placeholder="Nombre, ubicación, marca..."
+            placeholder="Nombre, ubicación, sistema..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -175,6 +216,52 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
             </SelectContent>
           </Select>
         </div>
+
+        {osOptions.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-ink-muted">Sistema operativo</span>
+            <Select value={osFilter} onValueChange={(v) => v && setOsFilter(v)}>
+              <SelectTrigger size="sm" className="w-48">
+                <SelectValue>
+                  {(v: string) => (v === "ALL" ? "Todos" : v === NO_DATA ? "Sin dato" : v)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todos</SelectItem>
+                {osOptions.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                    {getSupportState(o, OS_CATALOG) === "ENDED" ? " — sin soporte" : ""}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NO_DATA}>Sin dato</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {officeOptions.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-ink-muted">Ofimática</span>
+            <Select value={officeFilter} onValueChange={(v) => v && setOfficeFilter(v)}>
+              <SelectTrigger size="sm" className="w-48">
+                <SelectValue>
+                  {(v: string) => (v === "ALL" ? "Todas" : v === NO_DATA ? "Sin dato" : v)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todas</SelectItem>
+                {officeOptions.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                    {getSupportState(o, OFFICE_CATALOG) === "ENDED" ? " — sin soporte" : ""}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NO_DATA}>Sin dato</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <MobileRecords>
@@ -202,6 +289,11 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                 <RecordField label="Tipo">{ASSET_TYPE_SHORT[asset.type]}</RecordField>
                 <RecordField label="Ubicación">{asset.location ?? "—"}</RecordField>
                 {asset.owner && <RecordField label="Responsable">{asset.owner}</RecordField>}
+                {(asset.os || asset.office) && (
+                  <RecordField label="Sistema">
+                    <SoftwareLine os={asset.os} office={asset.office} />
+                  </RecordField>
+                )}
                 {(asset.brand || asset.model) && (
                   <RecordField label="Marca">
                     {[asset.brand, asset.model].filter(Boolean).join(" ")}
@@ -283,6 +375,7 @@ export function AssetsTable({ assets }: { assets: AssetRow[] }) {
                             {[asset.brand, asset.model].filter(Boolean).join(" ")}
                           </p>
                         )}
+                        <SoftwareLine os={asset.os} office={asset.office} />
                       </TableCell>
                       <TableCell className="text-ink-muted">{ASSET_TYPE_SHORT[asset.type]}</TableCell>
                       <TableCell>

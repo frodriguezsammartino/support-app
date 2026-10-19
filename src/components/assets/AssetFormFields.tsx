@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   hasOwner,
   ASSET_STATUS_META,
@@ -9,6 +10,13 @@ import {
   type AssetStatus,
   type AssetType,
 } from "@/lib/assets";
+import {
+  OFFICE_CATALOG,
+  OS_CATALOG,
+  getSupportState,
+  hasSoftware,
+  type SoftwareEntry,
+} from "@/lib/os";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +37,8 @@ export type AssetFormValues = {
   serialNumber: string;
   location: string;
   owner: string;
+  os: string;
+  office: string;
   purchasedAt: string;
   warrantyUntil: string;
   notes: string;
@@ -43,6 +53,8 @@ export const EMPTY_ASSET_FORM: AssetFormValues = {
   serialNumber: "",
   location: "",
   owner: "",
+  os: "",
+  office: "",
   purchasedAt: "",
   warrantyUntil: "",
   notes: "",
@@ -58,6 +70,73 @@ export function fromDateInput(value: string): Date | null {
   if (!value) return null;
   const parsed = new Date(`${value}T12:00:00Z`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const NONE = "__NONE__";
+const OTHER = "__OTHER__";
+
+/**
+ * Elegir de un catálogo (sistema operativo, ofimática) sin cerrarse a lo que
+ * conocemos: "Otro" abre un campo de texto. Las versiones sin soporte se marcan
+ * en la lista para que se vean antes de elegirlas, no después.
+ */
+function CatalogField({
+  label,
+  value,
+  catalog,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  catalog: SoftwareEntry[];
+  onChange: (value: string) => void;
+}) {
+  const known = catalog.some((e) => e.label === value);
+  // Si lo guardado no está en el catálogo, arranca mostrando el texto libre.
+  const [customMode, setCustomMode] = useState(value !== "" && !known);
+  const selected = customMode ? OTHER : value === "" ? NONE : value;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>{label} (opcional)</Label>
+      <Select
+        value={selected}
+        onValueChange={(v) => {
+          if (!v) return;
+          if (v === OTHER) {
+            setCustomMode(true);
+            if (known) onChange("");
+            return;
+          }
+          setCustomMode(false);
+          onChange(v === NONE ? "" : v);
+        }}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue>
+            {(v: string) => (v === NONE ? "Sin dato" : v === OTHER ? "Otro" : v)}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>Sin dato</SelectItem>
+          {catalog.map((e) => (
+            <SelectItem key={e.label} value={e.label}>
+              {e.label}
+              {getSupportState(e.label, catalog) === "ENDED" ? " — sin soporte" : ""}
+            </SelectItem>
+          ))}
+          <SelectItem value={OTHER}>Otro...</SelectItem>
+        </SelectContent>
+      </Select>
+      {customMode && (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Escribí cuál es"
+        />
+      )}
+    </div>
+  );
 }
 
 export function AssetFormFields({
@@ -133,6 +212,24 @@ export function AssetFormFields({
               placeholder="Ej: Dra. Gómez"
             />
           </div>
+        )}
+
+        {/* Solo donde se instala algo: una impresora no tiene sistema operativo. */}
+        {hasSoftware(values.type) && (
+          <>
+            <CatalogField
+              label="Sistema operativo"
+              value={values.os}
+              catalog={OS_CATALOG}
+              onChange={(os) => onChange({ os })}
+            />
+            <CatalogField
+              label="Ofimática"
+              value={values.office}
+              catalog={OFFICE_CATALOG}
+              onChange={(office) => onChange({ office })}
+            />
+          </>
         )}
 
         <div className="flex flex-col gap-2">

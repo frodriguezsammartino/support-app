@@ -190,6 +190,10 @@ model Asset {
   location      String?
   /// Persona a cargo. Solo aplica a equipos personales (PC, notebook).
   owner         String?
+  /// Sistema operativo y ofimática instalados (PC, notebook, servidor). Texto
+  /// libre; el catálogo de src/lib/os.ts dice cuáles ya no tienen soporte.
+  os            String?
+  office        String?
   status        AssetStatus @default(ACTIVE)
   purchasedAt   DateTime?
   warrantyUntil DateTime?

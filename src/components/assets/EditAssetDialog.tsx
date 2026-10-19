@@ -34,6 +34,8 @@ export type EditableAsset = {
   serialNumber: string | null;
   location: string | null;
   owner: string | null;
+  os: string | null;
+  office: string | null;
   purchasedAt: Date | null;
   warrantyUntil: Date | null;
   notes: string | null;
@@ -49,6 +51,8 @@ function toFormValues(asset: EditableAsset): AssetFormValues {
     serialNumber: asset.serialNumber ?? "",
     location: asset.location ?? "",
     owner: asset.owner ?? "",
+    os: asset.os ?? "",
+    office: asset.office ?? "",
     purchasedAt: toDateInput(asset.purchasedAt),
     warrantyUntil: toDateInput(asset.warrantyUntil),
     notes: asset.notes ?? "",
