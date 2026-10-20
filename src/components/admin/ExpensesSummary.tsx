@@ -67,6 +67,7 @@ export function ExpensesSummary({
   wastedRows,
   hrefs,
   calendar,
+  extraCards,
 }: {
   period: ExpensePeriod;
   summary: ExpenseSummary;
@@ -76,6 +77,8 @@ export function ExpensesSummary({
   hrefs: { mes: string; anio: string; prev: string; next: string; today: string };
   /** El calendario de los próximos 12 meses, que se abre con un botón. */
   calendar: React.ReactNode;
+  /** Más recuadros junto a los totales (por ejemplo, lo pendiente de aprobar). */
+  extraCards?: React.ReactNode;
 }) {
   const isMonth = period.mode === "mes";
   const currencies = summary.currencies;
@@ -163,6 +166,7 @@ export function ExpensesSummary({
           rows={wastedRows}
           alert
         />
+        {extraCards}
       </div>
 
       <Card className="py-0">

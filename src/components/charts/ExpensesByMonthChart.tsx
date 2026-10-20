@@ -23,7 +23,9 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   SERVICE: CATEGORICAL[1],
   SUPPORT: CATEGORICAL[2],
   OTHER: CATEGORICAL[3],
-  UPGRADES: CATEGORICAL[5],
+  REPAIRS: CATEGORICAL[5],
+  REPLACEMENTS: CATEGORICAL[4],
+  PURCHASES: "#7C6A9C",
 };
 
 export type ExpensesMonthRow = { month: string } & Record<ExpenseCategory, number>;

@@ -13,6 +13,9 @@ import { getPendingRetireIds } from "@/lib/pendingRetire";
 
 type Vista = "inventario" | "software" | "mejoras";
 
+/** Los pedidos que tocan equipos; las compras sueltas y las bajas se ven en Solicitudes. */
+const EQUIPMENT_KINDS = ["UPGRADE", "CHANGE", "REPLACE"] as const;
+
 export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
   const isAdmin = (await getRole()) === "ADMIN";
   const searchParams = await props.searchParams;
@@ -26,7 +29,7 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
   const since = new Date();
   since.setMonth(since.getMonth() - EXPENSE_WINDOW_MONTHS);
 
-  const [assets, pendingRetire, pendingUpgrades, upgrades] = await Promise.all([
+  const [assets, pendingRetire, pendingUpgrades, upgrades, categories, unassignedTickets] = await Promise.all([
     db.asset.findMany({
       orderBy: { code: "asc" },
       include: {
@@ -34,14 +37,26 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
       },
     }),
     getPendingRetireIds(),
-    db.request.count({ where: { kind: "UPGRADE", status: "PENDING" } }),
+    db.request.count({ where: { kind: { in: [...EQUIPMENT_KINDS] }, status: "PENDING" } }),
     vista === "mejoras"
       ? db.request.findMany({
           where: {
-            kind: "UPGRADE",
+            kind: { in: [...EQUIPMENT_KINDS] },
             OR: [{ status: "PENDING" }, { status: "APPROVED", decidedAt: { gte: since } }],
           },
           orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    // Para ofrecer cargar el ticket cuando un equipo pasa a reparación desde la lista.
+    vista === "inventario"
+      ? db.category.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+    vista === "inventario"
+      ? db.ticket.findMany({
+          where: { status: { in: ["BACKLOG", "IN_PROGRESS"] }, assetId: null },
+          select: { id: true, number: true, title: true },
+          orderBy: { number: "desc" },
+          take: 50,
         })
       : Promise.resolve([]),
   ]);
@@ -80,6 +95,7 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
   const upgradeRows: UpgradeExpenseRow[] = upgrades.map((r) => ({
     id: r.id,
     number: r.number,
+    kind: r.kind,
     assetId: r.assetId,
     targetLabel: r.targetLabel,
     title: r.title,
@@ -139,6 +155,8 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
             initialOs={initialOs}
             initialOffice={initialOffice}
             retirePendingIds={pendingRetire.assets}
+            categories={categories}
+            unassignedTickets={unassignedTickets}
           />
         </>
       )}

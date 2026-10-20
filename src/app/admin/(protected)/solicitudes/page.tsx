@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import { Plus } from "lucide-react";
 import { db } from "@/lib/db";
 import { getRole } from "@/lib/adminAuth";
 import { formatAmount } from "@/lib/licenses";
@@ -7,17 +8,24 @@ import {
   KIND_META,
   STATUS_META,
   componentLabel,
+  parseItems,
   type RequestKind,
   type RetireTarget,
 } from "@/lib/requests";
+import { RequestDialog, type KnownComponent } from "@/components/requests/RequestDialog";
 import { ResolveRequestDialog } from "@/components/requests/ResolveRequestDialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 type RequestItem = Awaited<ReturnType<typeof loadRequests>>[number];
 
 function loadRequests() {
-  return db.request.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+  return db.request.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { ticket: { select: { number: true } } },
+  });
 }
 
 function retireTargetOf(r: RequestItem): RetireTarget | null {
@@ -44,7 +52,9 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
   const status = STATUS_META[request.status];
   const href = targetHref(request);
   const component = componentLabel(request.component);
+  const items = parseItems(request.items);
   const pending = request.status === "PENDING";
+  const isSpend = request.kind !== "RETIRE";
 
   // La plata es del administrador: el técnico ve en qué quedó su pedido, no el monto.
   const costLine = !isAdmin
@@ -52,6 +62,18 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
     : request.status === "APPROVED"
       ? money(request.costCents, request.currency)
       : money(request.estimatedCostCents, request.currency);
+
+  // Si el pedido ya salió de un ticket, el seguimiento está ahí: no hace falta crear otro.
+  const resolvable = {
+    id: request.id,
+    kind: request.kind,
+    title: request.title,
+    targetLabel: request.targetLabel,
+    retireTarget: retireTargetOf(request),
+    estimatedCostCents: request.estimatedCostCents,
+    currency: request.currency,
+    canCreateTicket: false,
+  };
 
   return (
     <Card className="py-0">
@@ -66,7 +88,7 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
           <p className="font-medium text-ink">{request.title}</p>
 
           <p className="text-sm text-ink-muted">
-            {request.kind === "UPGRADE" ? "Equipo: " : ""}
+            {isSpend && request.assetId ? "Equipo: " : ""}
             {href ? (
               <Link href={href} className="text-brand hover:underline">
                 {request.targetLabel}
@@ -75,9 +97,28 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
               request.targetLabel
             )}
             {component && ` · ${component}`}
+            {request.ticket && (
+              <>
+                {" · desde el ticket "}
+                <Link href={`/admin/tickets/${request.ticketId}`} className="text-brand hover:underline">
+                  #{request.ticket.number}
+                </Link>
+              </>
+            )}
           </p>
 
-          <p className="text-sm text-ink">{request.reason}</p>
+          {items.length > 0 && (
+            <ul className="list-disc pl-5 text-sm text-ink">
+              {items.map((item, i) => (
+                <li key={i}>
+                  {item.text}
+                  {item.qty ? <span className="text-ink-muted"> × {item.qty}</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {request.reason && <p className="text-sm text-ink">{request.reason}</p>}
 
           <p className="text-xs text-slate-400">
             Pidió {request.requestedBy} el {format(request.createdAt, "dd/MM/yyyy")}
@@ -101,30 +142,13 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
 
         {pending && isAdmin && (
           <div className="flex shrink-0 gap-2">
-            <ResolveRequestDialog
-              decision="REJECT"
-              request={{
-                id: request.id,
-                kind: request.kind,
-                title: request.title,
-                targetLabel: request.targetLabel,
-                retireTarget: retireTargetOf(request),
-                estimatedCostCents: request.estimatedCostCents,
-                currency: request.currency,
-                canCreateTicket: false,
-              }}
-            />
+            <ResolveRequestDialog decision="REJECT" request={resolvable} />
             <ResolveRequestDialog
               decision="APPROVE"
               request={{
-                id: request.id,
-                kind: request.kind,
-                title: request.title,
-                targetLabel: request.targetLabel,
-                retireTarget: retireTargetOf(request),
-                estimatedCostCents: request.estimatedCostCents,
-                currency: request.currency,
-                canCreateTicket: request.kind === "UPGRADE" && !!request.assetId,
+                ...resolvable,
+                canCreateTicket:
+                  isSpend && request.kind !== "PURCHASE" && !!request.assetId && !request.ticketId,
               }}
             />
           </div>
@@ -135,21 +159,50 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
 }
 
 export default async function SolicitudesPage() {
-  const [role, requests] = await Promise.all([getRole(), loadRequests()]);
+  const [role, requests, assets, components] = await Promise.all([
+    getRole(),
+    loadRequests(),
+    db.asset.findMany({
+      select: { id: true, code: true, name: true, location: true },
+      orderBy: { code: "asc" },
+    }),
+    db.assetComponent.findMany({
+      select: { assetId: true, kind: true, description: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
   const isAdmin = role === "ADMIN";
+
+  const componentsByAsset = components.reduce<Record<string, KnownComponent[]>>((acc, c) => {
+    (acc[c.assetId] ??= []).push({ kind: c.kind, description: c.description });
+    return acc;
+  }, {});
 
   const pending = requests.filter((r) => r.status === "PENDING");
   const resolved = requests.filter((r) => r.status !== "PENDING");
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-lg font-semibold text-ink">Solicitudes</h1>
-        <p className="text-sm text-ink-muted">
-          {isAdmin
-            ? "Lo que pidió el técnico: bajas y mejoras. Nada se borra ni se gasta hasta que lo aprobás."
-            : "Tus pedidos al administrador: bajas y mejoras. Acá ves en qué quedó cada uno."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-ink">Solicitudes</h1>
+          <p className="text-sm text-ink-muted">
+            {isAdmin
+              ? "Lo que pidió el técnico: bajas, mejoras, cambios, reemplazos y compras. Nada se borra ni se gasta hasta que lo aprobás."
+              : "Tus pedidos al administrador. Acá ves en qué quedó cada uno."}
+          </p>
+        </div>
+        <RequestDialog
+          assets={assets}
+          componentsByAsset={componentsByAsset}
+          initialKind="PURCHASE"
+          trigger={
+            <Button size="sm">
+              <Plus className="size-4" />
+              Nueva solicitud
+            </Button>
+          }
+        />
       </div>
 
       <section className="flex flex-col gap-3">

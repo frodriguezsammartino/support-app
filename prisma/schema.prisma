@@ -47,6 +47,8 @@ model Ticket {
 
   comments      Comment[]
   statusHistory TicketStatusHistory[]
+  /// Pedidos de cambio, mejora o reemplazo que salieron de este ticket.
+  requests      Request[]
 
   @@index([status])
   @@index([categoryId])
@@ -205,9 +207,26 @@ model Asset {
   tickets          Ticket[]
   maintenanceTasks MaintenanceTask[]
   requests         Request[]
+  components       AssetComponent[]
 
   @@index([status])
   @@index([type])
+}
+
+/// Una pieza de un equipo (procesador, RAM, disco, fuente, monitor...). Texto
+/// libre: lo importante es saber qué tiene cada PC para pedir una mejora o un
+/// cambio sin tener que abrirla.
+model AssetComponent {
+  id          String   @id @default(cuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  /// Del catálogo de src/lib/components.ts (RAM, DISCO...), o texto libre.
+  kind        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assetId])
 }
 
 enum LicenseBilling {
@@ -283,8 +302,14 @@ model License {
 enum RequestKind {
   /// El técnico pide dar de baja un equipo, licencia/servicio o tarea periódica.
   RETIRE
-  /// El técnico pide una mejora de un equipo (RAM, disco, fuente, cooler...).
+  /// Mejorar algo que anda (ampliar la RAM, cambiar el disco por uno más rápido).
   UPGRADE
+  /// Cambiar algo roto: el mouse, el monitor, una fuente. Va por el mismo flujo.
+  CHANGE
+  /// Reemplazar el equipo entero; `items` lleva los componentes mínimos necesarios.
+  REPLACE
+  /// Comprar cosas del día a día (cables, insumos) para que quede registrado.
+  PURCHASE
 }
 
 enum RequestStatus {
@@ -310,13 +335,19 @@ model Request {
   license   License?         @relation(fields: [licenseId], references: [id], onDelete: SetNull)
   taskId    String?
   task      MaintenanceTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  /// El ticket desde el que se pidió, si salió de una reparación.
+  ticketId  String?
+  ticket    Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   /// Nombre del objeto al momento de pedir.
   targetLabel String
 
   title     String
-  /// RAM | DISCO | FUENTE | COOLER | OTRO. Solo para UPGRADE.
+  /// De qué pieza se trata, si se pidió desde un componente del equipo.
   component String?
-  reason    String
+  reason    String @default("")
+  /// Lo que hace falta, en líneas de texto libre: [{ "text": "RAM 8 GB", "qty": 1 }].
+  /// En un reemplazo son los componentes mínimos; en una compra, lo que se compra.
+  items     Json?
 
   /// Lo que estima el técnico (opcional) y lo que fija el admin al aprobar.
   estimatedCostCents Int?
@@ -334,4 +365,5 @@ model Request {
   @@index([assetId])
   @@index([licenseId])
   @@index([taskId])
+  @@index([ticketId])
 }

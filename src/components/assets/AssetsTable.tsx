@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 
 import { toast } from "sonner";
-import { deleteAsset } from "@/lib/actions/assets";
+import { deleteAsset, updateAssetStatus } from "@/lib/actions/assets";
 import {
   ASSET_STATUS_META,
   ASSET_STATUS_ORDER,
@@ -43,10 +43,10 @@ import {
   RecordFields,
   RecordTop,
 } from "@/components/ui/record-list";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useIsAdmin } from "@/components/RoleProvider";
 import { RetireControl, RetirePendingBadge } from "@/components/requests/RetireControl";
+import { RepairTicketDialog, type OpenTicketOption } from "./RepairTicketDialog";
 import { OFFICE_CATALOG, OS_CATALOG, SUPPORT_META, getSupportState } from "@/lib/os";
 
 export type AssetRow = {
@@ -66,6 +66,40 @@ export type AssetRow = {
   totalTickets: number;
 };
 
+/**
+ * El estado del equipo, cambiable desde la lista: marcar una PC en reparación son
+ * dos clics, sin abrir su ficha. Tiene el color del estado, como el pill de antes.
+ */
+function StatusSelect({
+  status,
+  disabled,
+  onChange,
+}: {
+  status: AssetStatus;
+  disabled: boolean;
+  onChange: (status: AssetStatus) => void;
+}) {
+  const meta = ASSET_STATUS_META[status];
+  return (
+    <Select value={status} onValueChange={(v) => v && v !== status && onChange(v as AssetStatus)} disabled={disabled}>
+      <SelectTrigger
+        size="sm"
+        aria-label="Cambiar el estado"
+        className={`h-7 w-auto gap-1 rounded-full border-transparent px-2.5 text-xs font-medium ${meta.badgeClass}`}
+      >
+        <SelectValue>{(v: string) => ASSET_STATUS_META[v as AssetStatus].label}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {ASSET_STATUS_ORDER.map((s) => (
+          <SelectItem key={s} value={s}>
+            {ASSET_STATUS_META[s].label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 /** Sistema operativo y ofimática en una línea, con rojo si alguno ya no tiene soporte. */
 function SoftwareLine({ os, office }: { os: string | null; office: string | null }) {
   if (!os && !office) return null;
@@ -74,7 +108,6 @@ function SoftwareLine({ os, office }: { os: string | null; office: string | null
   return (
     <p className={`mt-0.5 text-xs ${ended ? SUPPORT_META.ENDED.textClass : "text-ink-muted"}`}>
       {[os, office].filter(Boolean).join(" · ")}
-      {ended && " (sin soporte)"}
     </p>
   );
 }
@@ -86,6 +119,8 @@ export function AssetsTable({
   initialOs = "ALL",
   initialOffice = "ALL",
   retirePendingIds = [],
+  categories = [],
+  unassignedTickets = [],
 }: {
   assets: AssetRow[];
   /** Equipos con una baja pedida que el admin todavía no resolvió. */
@@ -93,11 +128,17 @@ export function AssetsTable({
   /** Llegar desde el panel de licencias ya filtrado por un sistema operativo. */
   initialOs?: string;
   initialOffice?: string;
+  /** Para ofrecer cargar el ticket cuando un equipo pasa a reparación. */
+  categories?: { id: string; name: string }[];
+  /** Tickets abiertos que todavía no tienen equipo, para vincular uno existente. */
+  unassignedTickets?: OpenTicketOption[];
 }) {
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const retirePending = useMemo(() => new Set(retirePendingIds), [retirePendingIds]);
   const [isPending, startTransition] = useTransition();
+  const [statusOverride, setStatusOverride] = useState<Record<string, AssetStatus>>({});
+  const [repairFor, setRepairFor] = useState<AssetRow | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -127,6 +168,23 @@ export function AssetsTable({
         .some((field) => String(field).toLowerCase().includes(needle));
     });
   }, [assets, search, typeFilter, statusFilter, osFilter, officeFilter]);
+
+  function changeStatus(asset: AssetRow, status: AssetStatus) {
+    startTransition(async () => {
+      const result = await updateAssetStatus(asset.id, status);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setStatusOverride((current) => ({ ...current, [asset.id]: status }));
+      router.refresh();
+
+      // Pasó a reparación y no hay ticket que la siga: se ofrece cargarlo.
+      if (status === "REPAIR" && asset.openTickets === 0 && categories.length > 0) {
+        setRepairFor(asset);
+      }
+    });
+  }
 
   function handleDelete(asset: AssetRow) {
     if (!confirm(`¿Eliminar "${asset.name}" del inventario?`)) return;
@@ -235,7 +293,6 @@ export function AssetsTable({
                 {osOptions.map((o) => (
                   <SelectItem key={o} value={o}>
                     {o}
-                    {getSupportState(o, OS_CATALOG) === "ENDED" ? " — sin soporte" : ""}
                   </SelectItem>
                 ))}
                 <SelectItem value={NO_DATA}>Sin dato</SelectItem>
@@ -258,7 +315,6 @@ export function AssetsTable({
                 {officeOptions.map((o) => (
                   <SelectItem key={o} value={o}>
                     {o}
-                    {getSupportState(o, OFFICE_CATALOG) === "ENDED" ? " — sin soporte" : ""}
                   </SelectItem>
                 ))}
                 <SelectItem value={NO_DATA}>Sin dato</SelectItem>
@@ -278,7 +334,8 @@ export function AssetsTable({
         )}
 
         {visible.map((asset) => {
-          const statusMeta = ASSET_STATUS_META[asset.status];
+          const shownStatus = statusOverride[asset.id] ?? asset.status;
+          const statusMeta = ASSET_STATUS_META[shownStatus];
           const warrantyMeta = WARRANTY_META[getWarrantyState(asset.warrantyUntil)];
           return (
             <RecordCard key={asset.id} className={statusMeta.rowClass}>
@@ -286,7 +343,11 @@ export function AssetsTable({
                 <Link href={`/admin/equipos/${asset.id}`} className="min-w-0 font-medium text-ink">
                   <span className="text-slate-400">#{asset.code}</span> {asset.name}
                 </Link>
-                <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
+                <StatusSelect
+                  status={shownStatus}
+                  disabled={isPending}
+                  onChange={(s) => changeStatus(asset, s)}
+                />
               </RecordTop>
 
               <RecordFields>
@@ -367,7 +428,8 @@ export function AssetsTable({
                 )}
 
                 {visible.map((asset) => {
-                  const statusMeta = ASSET_STATUS_META[asset.status];
+                  const shownStatus = statusOverride[asset.id] ?? asset.status;
+                  const statusMeta = ASSET_STATUS_META[shownStatus];
                   const warranty = getWarrantyState(asset.warrantyUntil);
                   const warrantyMeta = WARRANTY_META[warranty];
                   return (
@@ -399,7 +461,11 @@ export function AssetsTable({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
+                        <StatusSelect
+                          status={shownStatus}
+                          disabled={isPending}
+                          onChange={(s) => changeStatus(asset, s)}
+                        />
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col leading-tight">
@@ -438,6 +504,20 @@ export function AssetsTable({
           </CardContent>
         </Card>
       </DesktopTable>
+
+      {repairFor && (
+        <RepairTicketDialog
+          key={repairFor.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setRepairFor(null);
+          }}
+          assetId={repairFor.id}
+          assetName={repairFor.name}
+          categories={categories}
+          openTickets={unassignedTickets}
+        />
+      )}
     </div>
   );
 }

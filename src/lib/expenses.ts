@@ -2,18 +2,28 @@ import { MONTH_NAMES, getPaymentsInWindow, type LicenseKind } from "./licenses";
 
 /**
  * Resumen de gastos de sistemas por período, para el dashboard. Junta lo que se
- * paga de licencias y servicios (según su calendario de pagos) con las mejoras y
- * repuestos aprobados, y lo agrupa por categoría. Las monedas nunca se suman entre
- * sí: cada categoría lleva un monto por moneda.
+ * paga de licencias y servicios (según su calendario de pagos) con los pedidos
+ * aprobados (mejoras, cambios por rotura, reemplazos y compras), y lo agrupa por
+ * categoría. Las monedas nunca se suman entre sí: cada categoría lleva un monto
+ * por moneda.
  */
-export type ExpenseCategory = "SOFTWARE" | "SERVICE" | "SUPPORT" | "OTHER" | "UPGRADES";
+export type ExpenseCategory =
+  | "SOFTWARE"
+  | "SERVICE"
+  | "SUPPORT"
+  | "OTHER"
+  | "REPAIRS"
+  | "REPLACEMENTS"
+  | "PURCHASES";
 
 export const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
   "SOFTWARE",
   "SERVICE",
   "SUPPORT",
   "OTHER",
-  "UPGRADES",
+  "REPAIRS",
+  "REPLACEMENTS",
+  "PURCHASES",
 ];
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -21,8 +31,17 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   SERVICE: "Servicios",
   SUPPORT: "Soporte contratado",
   OTHER: "Otros gastos fijos",
-  UPGRADES: "Mejoras y repuestos",
+  REPAIRS: "Reparaciones y mejoras",
+  REPLACEMENTS: "Reemplazo de equipos",
+  PURCHASES: "Compras",
 };
+
+/** Un cambio por rotura y una mejora son lo mismo para el gasto: plata puesta en equipos que ya hay. */
+function categoryOfRequest(kind: string): ExpenseCategory {
+  if (kind === "REPLACE") return "REPLACEMENTS";
+  if (kind === "PURCHASE") return "PURCHASES";
+  return "REPAIRS";
+}
 
 const KIND_TO_CATEGORY: Record<LicenseKind, ExpenseCategory> = {
   SOFTWARE: "SOFTWARE",
@@ -99,9 +118,13 @@ export function resolvePeriod(
 type PayableLicense = Parameters<typeof getPaymentsInWindow>[0];
 export type ExpenseLicense = PayableLicense & { kind: LicenseKind };
 
-export type ExpenseUpgrade = {
+/** Un pedido aprobado (no una baja) con su costo. */
+export type ExpenseRequest = {
   id: string;
+  /** UPGRADE, CHANGE, REPLACE o PURCHASE. */
+  kind: string;
   title: string;
+  /** El equipo; en una compra suelta es "Sin equipo asociado". */
   targetLabel: string;
   costCents: number | null;
   currency: string;
@@ -135,7 +158,7 @@ function emptyByCategory() {
 /** Todo lo que se gasta entre `from` y `to`, por categoría y por moneda. */
 export function summarizeExpenses(
   licenses: ExpenseLicense[],
-  upgrades: ExpenseUpgrade[],
+  requests: ExpenseRequest[],
   from: Date,
   to: Date
 ): ExpenseSummary {
@@ -154,15 +177,15 @@ export function summarizeExpenses(
     });
   }
 
-  for (const upgrade of upgrades) {
-    if (!upgrade.costCents || !upgrade.decidedAt) continue;
-    if (upgrade.decidedAt < from || upgrade.decidedAt > to) continue;
+  for (const request of requests) {
+    if (!request.costCents || !request.decidedAt) continue;
+    if (request.decidedAt < from || request.decidedAt > to) continue;
     items.push({
-      id: upgrade.id,
-      name: `${upgrade.title} · ${upgrade.targetLabel}`,
-      category: "UPGRADES",
-      currency: upgrade.currency,
-      cents: upgrade.costCents,
+      id: request.id,
+      name: request.targetLabel === "Sin equipo asociado" ? request.title : `${request.title} · ${request.targetLabel}`,
+      category: categoryOfRequest(request.kind),
+      currency: request.currency,
+      cents: request.costCents,
       count: 1,
     });
   }
@@ -180,10 +203,10 @@ export function summarizeExpenses(
 export const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** Los 12 meses de un año, para ver cómo se reparte el gasto a lo largo del año. */
-export function monthlySeries(licenses: ExpenseLicense[], upgrades: ExpenseUpgrade[], year: number) {
+export function monthlySeries(licenses: ExpenseLicense[], requests: ExpenseRequest[], year: number) {
   return MONTH_SHORT.map((label, month) => {
     const from = new Date(Date.UTC(year, month, 1, 0, 0, 0));
     const to = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59));
-    return { label, byCategory: summarizeExpenses(licenses, upgrades, from, to).byCategory };
+    return { label, byCategory: summarizeExpenses(licenses, requests, from, to).byCategory };
   });
 }

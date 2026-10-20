@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Ticket as TicketIcon, Wrench } from "lucide-react";
+import { ArrowLeft, ClipboardList, Ticket as TicketIcon, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { getRole } from "@/lib/adminAuth";
 import {
@@ -15,7 +15,8 @@ import {
 import { describeRecurrence, getNextDueAt } from "@/lib/maintenance";
 import { STATUS_LABELS } from "@/lib/priority";
 import { formatAmount } from "@/lib/licenses";
-import { KIND_META, STATUS_META as REQUEST_STATUS_META } from "@/lib/requests";
+import { KIND_META, STATUS_META as REQUEST_STATUS_META, isSpendKind } from "@/lib/requests";
+import { hasComponents } from "@/lib/components";
 import {
   OFFICE_CATALOG,
   OS_CATALOG,
@@ -24,7 +25,9 @@ import {
   hasSoftware,
 } from "@/lib/os";
 import { EditAssetDialog } from "@/components/assets/EditAssetDialog";
-import { RequestUpgradeDialog } from "@/components/requests/RequestUpgradeDialog";
+import { AssetComponents } from "@/components/assets/AssetComponents";
+import { RequestDialog } from "@/components/requests/RequestDialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -68,6 +71,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
         include: { completions: { orderBy: { completedAt: "desc" }, take: 50 } },
       },
       requests: { orderBy: { createdAt: "desc" } },
+      components: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -80,11 +84,12 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
   // Lo que se gastó en mejoras de este equipo, por moneda (nunca se suman monedas distintas).
   const isAdmin = (await getRole()) === "ADMIN";
   const upgradeSpend = asset.requests
-    .filter((r) => isAdmin && r.kind === "UPGRADE" && r.status === "APPROVED" && r.costCents)
+    .filter((r) => isAdmin && isSpendKind(r.kind) && r.status === "APPROVED" && r.costCents)
     .reduce<Record<string, number>>((acc, r) => {
       acc[r.currency] = (acc[r.currency] ?? 0) + (r.costCents ?? 0);
       return acc;
     }, {});
+  const assetOption = { id: asset.id, code: asset.code, name: asset.name, location: asset.location };
   const osState = getSupportState(asset.os, OS_CATALOG);
   const officeState = getSupportState(asset.office, OFFICE_CATALOG);
 
@@ -200,7 +205,20 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               openTickets={unassignedTickets}
               hasOpenTicket={openTickets.length > 0}
             />
-            <RequestUpgradeDialog assetId={asset.id} assetName={asset.name} />
+            <RequestDialog
+              assets={[assetOption]}
+              assetId={asset.id}
+              lockAsset
+              componentsByAsset={{
+                [asset.id]: asset.components.map((c) => ({ kind: c.kind, description: c.description })),
+              }}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <ClipboardList className="size-4" />
+                  Hacer una solicitud
+                </Button>
+              }
+            />
             <span className="text-sm text-ink-muted">
               {asset.tickets.length} ticket{asset.tickets.length === 1 ? "" : "s"} en total
               {openTickets.length > 0 && (
@@ -213,6 +231,24 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
           </div>
         </CardContent>
       </Card>
+
+      {hasComponents(asset.type) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Componentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AssetComponents
+              asset={assetOption}
+              components={asset.components.map((c) => ({
+                id: c.id,
+                kind: c.kind,
+                description: c.description,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {asset.requests.length > 0 && (
         <Card>

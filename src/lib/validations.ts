@@ -153,13 +153,71 @@ export const retireRequestSchema = z.object({
   reason: z.string().trim().min(3, "Contá en pocas palabras por qué hay que darlo de baja").max(1000),
 });
 
-export const upgradeRequestSchema = z.object({
-  assetId: z.string().min(1, "Elegí el equipo"),
-  component: z.enum(["RAM", "DISCO", "FUENTE", "COOLER", "OTRO"]),
-  title: z.string().trim().min(3, "Contá qué hay que cambiar o ampliar").max(150),
-  reason: z.string().trim().min(3, "Contá por qué hace falta (ej: la PC anda lenta)").max(1000),
-  estimatedCostCents: z.coerce.number().int().min(0).nullable().optional(),
-  currency: z.enum(["ARS", "USD"]),
+const optionalId = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((v) => v || null);
+
+/**
+ * Un pedido de mejora, cambio, reemplazo o compra. Pocas reglas a propósito: lo
+ * único obligatorio es decir qué se necesita; el resto es opcional salvo donde no
+ * tendría sentido sin eso (un reemplazo sin saber qué equipo, ni con qué piezas).
+ */
+export const spendRequestSchema = z
+  .object({
+    kind: z.enum(["UPGRADE", "CHANGE", "REPLACE", "PURCHASE"]),
+    assetId: optionalId,
+    ticketId: optionalId,
+    component: z
+      .string()
+      .trim()
+      .max(40)
+      .optional()
+      .nullable()
+      .transform((v) => v || null),
+    title: z.string().trim().min(3, "Contá qué hay que cambiar, mejorar o comprar").max(150),
+    reason: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional()
+      .nullable()
+      .transform((v) => v ?? ""),
+    items: z
+      .array(
+        z.object({
+          text: z.string().trim().max(200),
+          qty: z.coerce.number().int().min(1).max(9999).nullable().optional(),
+        })
+      )
+      .max(30)
+      .default([])
+      .transform((list) => list.filter((item) => item.text.length > 0)),
+    estimatedCostCents: z.coerce.number().int().min(0).nullable().optional(),
+    currency: z.enum(["ARS", "USD"]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.kind === "UPGRADE" && !value.assetId) {
+      ctx.addIssue({ code: "custom", message: "Elegí el equipo que se va a mejorar", path: ["assetId"] });
+    }
+    if (value.kind === "REPLACE" && !value.assetId) {
+      ctx.addIssue({ code: "custom", message: "Elegí qué equipo hay que reemplazar", path: ["assetId"] });
+    }
+    if (value.kind === "REPLACE" && value.items.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Cargá al menos un componente mínimo que tiene que tener el reemplazo",
+        path: ["items"],
+      });
+    }
+  });
+
+/** Una pieza de una PC: qué es y qué tiene. */
+export const assetComponentSchema = z.object({
+  assetId: z.string().min(1),
+  kind: z.string().trim().min(1, "Elegí qué pieza es").max(40),
+  description: z.string().trim().min(1, "Contá qué tiene. Ejemplo: 8 GB DDR3").max(200),
 });
 
 export const resolveRequestSchema = z.object({

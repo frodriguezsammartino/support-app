@@ -1,13 +1,19 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
 import { db } from "@/lib/db";
+import { getRole } from "@/lib/adminAuth";
+import { formatAmount } from "@/lib/licenses";
+import { KIND_META, STATUS_META as REQUEST_STATUS_META } from "@/lib/requests";
 import { StatusBadge } from "@/components/tickets/StatusBadge";
 import { PriorityBadge } from "@/components/tickets/PriorityBadge";
 import { CommentForm } from "@/components/tickets/CommentForm";
 import { TicketAdminControls } from "@/components/tickets/TicketAdminControls";
 import { TicketTitleEditor } from "@/components/tickets/TicketTitleEditor";
 import { TicketAssetEditor } from "@/components/assets/TicketAssetEditor";
+import { RequestDialog, type KnownComponent } from "@/components/requests/RequestDialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -24,13 +30,27 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
 
   if (!ticket) notFound();
 
-  const [categories, assets] = await Promise.all([
+  const [categories, assets, components, role, requests] = await Promise.all([
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.asset.findMany({
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),
+    // Las piezas de cada PC: sirven de punto de partida si el pedido es un reemplazo.
+    db.assetComponent.findMany({
+      select: { assetId: true, kind: true, description: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    getRole(),
+    // Aparte del ticket: el ticket viaja entero a componentes del navegador, y los costos no tienen que ir ahí.
+    db.request.findMany({ where: { ticketId: id }, orderBy: { createdAt: "desc" } }),
   ]);
+  const isAdmin = role === "ADMIN";
+
+  const componentsByAsset = components.reduce<Record<string, KnownComponent[]>>((acc, c) => {
+    (acc[c.assetId] ??= []).push({ kind: c.kind, description: c.description });
+    return acc;
+  }, {});
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -73,6 +93,22 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
             <span className="text-sm text-ink-muted">Equipo:</span>
             <TicketAssetEditor ticketId={ticket.id} assetId={ticket.assetId} assets={assets} />
           </div>
+          {/* Si arreglarlo no alcanza, el pedido sale de acá y queda enlazado a este ticket. */}
+          <div>
+            <RequestDialog
+              assets={assets}
+              assetId={ticket.assetId ?? ""}
+              ticketId={ticket.id}
+              componentsByAsset={componentsByAsset}
+              initialKind="CHANGE"
+              trigger={
+                <Button variant="outline" size="sm">
+                  <ClipboardList className="size-4" />
+                  Solicitar reemplazo o mejora
+                </Button>
+              }
+            />
+          </div>
           {ticket.resolutionNote && (
             <div className="rounded-lg bg-slate-50 p-3 text-sm">
               <p className="font-medium">Nota de resolución</p>
@@ -81,6 +117,34 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
           )}
         </CardContent>
       </Card>
+
+      {requests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Solicitudes de este ticket</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {requests.map((r) => (
+              <div key={r.id} className="flex flex-col gap-1 rounded-lg border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={KIND_META[r.kind].badgeClass}>{KIND_META[r.kind].label}</Badge>
+                  <Badge className={REQUEST_STATUS_META[r.status].badgeClass}>
+                    {REQUEST_STATUS_META[r.status].label}
+                  </Badge>
+                  <span className="text-sm font-medium">{r.title}</span>
+                </div>
+                {r.reason && <p className="text-sm text-ink-muted">{r.reason}</p>}
+                <p className="text-xs text-slate-400">
+                  Pidió {r.requestedBy} el {r.createdAt.toLocaleDateString("es-AR")}
+                  {isAdmin && r.status === "APPROVED" && r.costCents
+                    ? ` · costo ${r.currency} ${formatAmount(r.costCents)}`
+                    : ""}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <TicketAdminControls ticket={ticket} categories={categories} />
 

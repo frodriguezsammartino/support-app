@@ -6,9 +6,16 @@ import { actorName, adminOnly, requireStaff } from "@/lib/adminAuth";
 import {
   resolveRequestSchema,
   retireRequestSchema,
-  upgradeRequestSchema,
+  spendRequestSchema,
 } from "@/lib/validations";
-import { componentLabel, type RetireTarget } from "@/lib/requests";
+import {
+  KIND_META,
+  componentLabel,
+  isSpendKind,
+  parseItems,
+  type RetireTarget,
+  type SpendKind,
+} from "@/lib/requests";
 import { deleteAsset } from "./assets";
 import { deleteMaintenanceTask } from "./maintenance";
 import { createInternalTicket } from "./tickets";
@@ -17,11 +24,16 @@ export type ActionResult = { error?: string };
 
 export type RetireRequestInput = { target: RetireTarget; id: string; reason: string };
 
-export type UpgradeRequestInput = {
-  assetId: string;
-  component: string;
+export type SpendRequestInput = {
+  kind: SpendKind;
+  assetId?: string | null;
+  /** El ticket de reparación desde el que se pide, si salió de uno. */
+  ticketId?: string | null;
+  component?: string | null;
   title: string;
-  reason: string;
+  reason?: string | null;
+  /** Componentes mínimos (reemplazo) o cosas a comprar: líneas de texto libre. */
+  items?: { text: string; qty?: number | null }[];
   estimatedCostCents?: number | null;
   currency: string;
 };
@@ -31,21 +43,21 @@ export type ResolveInput = {
   costCents?: number | null;
   currency?: string;
   note?: string | null;
-  /** Para mejoras: crear un ticket para que el técnico la haga y quede el seguimiento. */
+  /** Crear un ticket para que el técnico lo haga y quede el seguimiento. */
   createTicket?: boolean;
 };
 
-function revalidateRequests() {
-  for (const path of [
+function revalidateRequests(extra: (string | null | undefined)[] = []) {
+  const paths = [
     "/admin",
     "/admin/solicitudes",
     "/admin/equipos",
     "/admin/licencias",
     "/admin/mantenimiento",
     "/admin/dashboard",
-  ]) {
-    revalidatePath(path);
-  }
+    ...extra.filter((p): p is string => !!p),
+  ];
+  for (const path of paths) revalidatePath(path);
 }
 
 /** Nombre del objeto al momento de pedir, o null si ya no existe. */
@@ -87,37 +99,56 @@ export async function createRetireRequest(input: RetireRequestInput): Promise<Ac
   return {};
 }
 
-export async function createUpgradeRequest(input: UpgradeRequestInput): Promise<ActionResult> {
+/**
+ * Un pedido de mejora, cambio por rotura, reemplazo de equipo o compra. Todos van
+ * por el mismo flujo: el técnico pide, el admin aprueba y, si hay costo, queda
+ * como gasto.
+ */
+export async function createSpendRequest(input: SpendRequestInput): Promise<ActionResult> {
   const role = await requireStaff();
 
-  const parsed = upgradeRequestSchema.safeParse(input);
+  const parsed = spendRequestSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
   const data = parsed.data;
 
-  const asset = await db.asset.findUnique({ where: { id: data.assetId }, select: { name: true } });
-  if (!asset) return { error: "No se encontró el equipo." };
+  let targetLabel = "Sin equipo asociado";
+  if (data.assetId) {
+    const asset = await db.asset.findUnique({ where: { id: data.assetId }, select: { name: true } });
+    if (!asset) return { error: "No se encontró el equipo." };
+    targetLabel = asset.name;
+  }
+
+  if (data.ticketId) {
+    const ticket = await db.ticket.findUnique({ where: { id: data.ticketId }, select: { id: true } });
+    if (!ticket) return { error: "No se encontró el ticket." };
+  }
 
   await db.request.create({
     data: {
-      kind: "UPGRADE",
+      kind: data.kind,
       assetId: data.assetId,
-      targetLabel: asset.name,
+      ticketId: data.ticketId,
+      targetLabel,
       title: data.title,
       component: data.component,
       reason: data.reason,
+      items: data.items.length > 0 ? data.items.map((i) => ({ text: i.text, qty: i.qty ?? null })) : undefined,
       estimatedCostCents: data.estimatedCostCents ?? null,
       currency: data.currency,
       requestedBy: actorName(role),
     },
   });
 
-  revalidateRequests();
+  revalidateRequests([
+    data.assetId ? `/admin/equipos/${data.assetId}` : null,
+    data.ticketId ? `/admin/tickets/${data.ticketId}` : null,
+  ]);
   return {};
 }
 
 /**
  * Solo el admin resuelve. Aprobar una baja la ejecuta (con la consecuencia propia
- * de cada tipo); aprobar una mejora registra el gasto. Rechazar no toca nada.
+ * de cada tipo); aprobar un pedido registra el gasto. Rechazar no toca nada.
  */
 export async function resolveRequest(requestId: string, input: ResolveInput): Promise<ActionResult> {
   const denied = await adminOnly();
@@ -136,7 +167,7 @@ export async function resolveRequest(requestId: string, input: ResolveInput): Pr
       where: { id: requestId },
       data: { status: "REJECTED", decidedAt: new Date(), decisionNote: note },
     });
-    revalidateRequests();
+    revalidateRequests([request.ticketId ? `/admin/tickets/${request.ticketId}` : null]);
     return {};
   }
 
@@ -158,16 +189,30 @@ export async function resolveRequest(requestId: string, input: ResolveInput): Pr
     return {};
   }
 
-  // UPGRADE: se registra el costo y, si se pidió, se crea el ticket de seguimiento.
-  if (createTicket && request.assetId) {
+  // Mejora, cambio, reemplazo o compra: se registra el costo y, si se pidió, se crea
+  // el ticket de seguimiento. Si el pedido ya salió de un ticket no hace falta otro.
+  if (
+    createTicket &&
+    isSpendKind(request.kind) &&
+    request.kind !== "PURCHASE" &&
+    request.assetId &&
+    !request.ticketId
+  ) {
     const category =
       (await db.category.findFirst({ where: { name: "Hardware", active: true } })) ??
       (await db.category.findFirst({ where: { active: true }, orderBy: { name: "asc" } }));
     if (category) {
-      const label = componentLabel(request.component);
+      const piece = componentLabel(request.component);
+      const lines = parseItems(request.items).map((i) => `- ${i.text}${i.qty ? ` x${i.qty}` : ""}`);
       const ticket = await createInternalTicket({
         title: request.title,
-        description: `Mejora aprobada (solicitud #${request.number})${label ? `: ${label}` : ""}. ${request.reason}`,
+        description: [
+          `${KIND_META[request.kind].label} aprobado (solicitud #${request.number})${piece ? `: ${piece}` : ""}.`,
+          request.reason,
+          lines.length > 0 ? lines.join("\n") : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
         categoryId: category.id,
         priority: "MEDIUM",
         assetId: request.assetId,
@@ -188,6 +233,6 @@ export async function resolveRequest(requestId: string, input: ResolveInput): Pr
     },
   });
 
-  revalidateRequests();
+  revalidateRequests([request.ticketId ? `/admin/tickets/${request.ticketId}` : null]);
   return {};
 }

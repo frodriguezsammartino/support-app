@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { formatAmount } from "@/lib/licenses";
-import { EXPENSE_WINDOW_MONTHS, STATUS_META, componentLabel } from "@/lib/requests";
+import {
+  EXPENSE_WINDOW_MONTHS,
+  KIND_META,
+  STATUS_META,
+  componentLabel,
+  type RequestKind,
+} from "@/lib/requests";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,6 +22,7 @@ import {
 export type UpgradeExpenseRow = {
   id: string;
   number: number;
+  kind: RequestKind;
   assetId: string | null;
   targetLabel: string;
   title: string;
@@ -62,7 +69,7 @@ export function UpgradeExpenses({
           )}
         </div>
         <p className="text-xs text-slate-400">
-          RAM, discos, fuentes y otros repuestos que el técnico pidió y el administrador aprobó
+          Mejoras, cambios por rotura y reemplazos que pidió el técnico y el administrador aprobó
         </p>
       </CardHeader>
       <CardContent className="p-0">
@@ -97,7 +104,10 @@ export function UpgradeExpenses({
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="text-ink">{r.title}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={KIND_META[r.kind].badgeClass}>{KIND_META[r.kind].label}</Badge>
+                        <span className="text-ink">{r.title}</span>
+                      </div>
                       {component && <span className="block text-xs text-slate-400">{component}</span>}
                     </TableCell>
                     <TableCell className="text-ink-muted">{r.requestedBy}</TableCell>

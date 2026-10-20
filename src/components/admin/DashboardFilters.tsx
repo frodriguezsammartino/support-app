@@ -16,7 +16,14 @@ const RANGE_LABELS: Record<string, string> = {
   all: "Todo",
 };
 
-export function DashboardFilters({ categories }: { categories: { id: string; name: string }[] }) {
+export function DashboardFilters({
+  categories,
+  showCategory = true,
+}: {
+  categories: { id: string; name: string }[];
+  /** La categoría es de tickets: en las otras pestañas no tiene sentido. */
+  showCategory?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const range = searchParams.get("range") ?? "all";
@@ -50,6 +57,7 @@ export function DashboardFilters({ categories }: { categories: { id: string; nam
         </Select>
       </div>
 
+      {showCategory && (
       <div className="flex flex-col gap-1">
         <span className="text-xs text-ink-muted">Categoría</span>
         <Select value={categoryId} onValueChange={(v) => v && update("categoryId", v)}>
@@ -68,6 +76,7 @@ export function DashboardFilters({ categories }: { categories: { id: string; nam
           </SelectContent>
         </Select>
       </div>
+      )}
     </div>
   );
 }

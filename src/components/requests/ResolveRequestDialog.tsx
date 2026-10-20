@@ -68,17 +68,17 @@ export function ResolveRequestDialog({
   const [isPending, startTransition] = useTransition();
 
   function submit() {
-    if (approve && request.kind === "UPGRADE" && cost.trim() && parseMoneyToCents(cost) == null) {
+    if (approve && request.kind !== "RETIRE" && cost.trim() && parseMoneyToCents(cost) == null) {
       toast.error("El costo no es un número válido. Ejemplo: 45000");
       return;
     }
     startTransition(async () => {
       const result = await resolveRequest(request.id, {
         decision,
-        costCents: approve && request.kind === "UPGRADE" ? parseMoneyToCents(cost) : null,
+        costCents: approve && request.kind !== "RETIRE" ? parseMoneyToCents(cost) : null,
         currency,
         note,
-        createTicket: approve && request.kind === "UPGRADE" ? createTicket : false,
+        createTicket: approve && request.kind !== "RETIRE" ? createTicket : false,
       });
       if (result.error) {
         toast.error(result.error);
@@ -114,7 +114,7 @@ export function ResolveRequestDialog({
           <DialogTitle>{approve ? "Aprobar la solicitud" : "Rechazar la solicitud"}</DialogTitle>
           <DialogDescription>
             {request.title}
-            {request.kind === "UPGRADE" && ` · ${request.targetLabel}`}
+            {request.kind !== "RETIRE" && ` · ${request.targetLabel}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -124,7 +124,7 @@ export function ResolveRequestDialog({
           </p>
         )}
 
-        {approve && request.kind === "UPGRADE" && (
+        {approve && request.kind !== "RETIRE" && (
           <div className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
