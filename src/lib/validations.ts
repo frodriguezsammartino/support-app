@@ -162,7 +162,7 @@ const optionalId = z
 /**
  * Un pedido de mejora, cambio, reemplazo o compra. Pocas reglas a propósito: lo
  * único obligatorio es decir qué se necesita; el resto es opcional salvo donde no
- * tendría sentido sin eso (un reemplazo sin saber qué equipo, ni con qué piezas).
+ * tendría sentido sin eso (una mejora o un reemplazo sin saber de qué equipo).
  */
 export const spendRequestSchema = z
   .object({
@@ -203,13 +203,6 @@ export const spendRequestSchema = z
     }
     if (value.kind === "REPLACE" && !value.assetId) {
       ctx.addIssue({ code: "custom", message: "Elegí qué equipo hay que reemplazar", path: ["assetId"] });
-    }
-    if (value.kind === "REPLACE" && value.items.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Cargá al menos un componente mínimo que tiene que tener el reemplazo",
-        path: ["items"],
-      });
     }
   });
 

@@ -11,7 +11,7 @@ import { CommentForm } from "@/components/tickets/CommentForm";
 import { TicketAdminControls } from "@/components/tickets/TicketAdminControls";
 import { TicketTitleEditor } from "@/components/tickets/TicketTitleEditor";
 import { TicketAssetEditor } from "@/components/assets/TicketAssetEditor";
-import { RequestDialog, type KnownComponent } from "@/components/requests/RequestDialog";
+import { RequestDialog } from "@/components/requests/RequestDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,16 +30,11 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
 
   if (!ticket) notFound();
 
-  const [categories, assets, components, role, requests] = await Promise.all([
+  const [categories, assets, role, requests] = await Promise.all([
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.asset.findMany({
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
-    }),
-    // Las piezas de cada PC: sirven de punto de partida si el pedido es un reemplazo.
-    db.assetComponent.findMany({
-      select: { assetId: true, kind: true, description: true },
-      orderBy: { createdAt: "asc" },
     }),
     getRole(),
     // Aparte del ticket: el ticket viaja entero a componentes del navegador, y los costos no tienen que ir ahí.
@@ -47,10 +42,7 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
   ]);
   const isAdmin = role === "ADMIN";
 
-  const componentsByAsset = components.reduce<Record<string, KnownComponent[]>>((acc, c) => {
-    (acc[c.assetId] ??= []).push({ kind: c.kind, description: c.description });
-    return acc;
-  }, {});
+
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -99,7 +91,6 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
               assets={assets}
               assetId={ticket.assetId ?? ""}
               ticketId={ticket.id}
-              componentsByAsset={componentsByAsset}
               initialKind="CHANGE"
               trigger={
                 <Button variant="outline" size="sm">

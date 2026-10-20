@@ -12,7 +12,7 @@ import {
   type RequestKind,
   type RetireTarget,
 } from "@/lib/requests";
-import { RequestDialog, type KnownComponent } from "@/components/requests/RequestDialog";
+import { RequestDialog } from "@/components/requests/RequestDialog";
 import { ResolveRequestDialog } from "@/components/requests/ResolveRequestDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,24 +159,15 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
 }
 
 export default async function SolicitudesPage() {
-  const [role, requests, assets, components] = await Promise.all([
+  const [role, requests, assets] = await Promise.all([
     getRole(),
     loadRequests(),
     db.asset.findMany({
       select: { id: true, code: true, name: true, location: true },
       orderBy: { code: "asc" },
     }),
-    db.assetComponent.findMany({
-      select: { assetId: true, kind: true, description: true },
-      orderBy: { createdAt: "asc" },
-    }),
   ]);
   const isAdmin = role === "ADMIN";
-
-  const componentsByAsset = components.reduce<Record<string, KnownComponent[]>>((acc, c) => {
-    (acc[c.assetId] ??= []).push({ kind: c.kind, description: c.description });
-    return acc;
-  }, {});
 
   const pending = requests.filter((r) => r.status === "PENDING");
   const resolved = requests.filter((r) => r.status !== "PENDING");
@@ -194,7 +185,6 @@ export default async function SolicitudesPage() {
         </div>
         <RequestDialog
           assets={assets}
-          componentsByAsset={componentsByAsset}
           initialKind="PURCHASE"
           trigger={
             <Button size="sm">

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { createSpendRequest } from "@/lib/actions/requests";
-import { COMPONENT_KINDS, componentKindLabel } from "@/lib/components";
 import { CURRENCIES, parseMoneyToCents, type Currency } from "@/lib/licenses";
 import { SPEND_KIND_OPTIONS, type SpendKind } from "@/lib/requests";
 import { AssetPicker, type AssetOption } from "@/components/assets/AssetPicker";
@@ -32,12 +31,11 @@ import {
 
 type Line = { text: string; qty: string };
 
-export type KnownComponent = { kind: string; description: string };
-
 /**
  * Un solo formulario para todo lo que el técnico necesita pedir: mejorar algo,
  * cambiar lo que se rompió, reemplazar un equipo o comprar cosas del día a día.
- * Pide poco: qué se necesita y, según el caso, la lista de lo que hace falta.
+ * Pide poco: qué se necesita, qué hay que hacer, un detalle y el costo. Solo una
+ * compra lleva además la lista de lo que hay que comprar.
  */
 export function RequestDialog({
   trigger,
@@ -45,7 +43,6 @@ export function RequestDialog({
   assetId: initialAssetId = "",
   lockAsset = false,
   ticketId = null,
-  componentsByAsset = {},
   initialKind = "UPGRADE",
   initialTitle = "",
   initialComponent = null,
@@ -59,8 +56,6 @@ export function RequestDialog({
   lockAsset?: boolean;
   /** Si se pide desde un ticket de reparación, queda enlazado a él. */
   ticketId?: string | null;
-  /** Las piezas conocidas de cada equipo: sirven de punto de partida para un reemplazo. */
-  componentsByAsset?: Record<string, KnownComponent[]>;
   initialKind?: SpendKind;
   initialTitle?: string;
   /** La pieza desde la que se abrió el pedido, si fue desde la lista de componentes. */
@@ -78,10 +73,10 @@ export function RequestDialog({
   const [isPending, startTransition] = useTransition();
 
   const option = SPEND_KIND_OPTIONS.find((o) => o.value === kind) ?? SPEND_KIND_OPTIONS[0];
-  const knownComponents = componentsByAsset[assetId] ?? [];
   const asset = assets.find((a) => a.id === assetId);
   const assetRequired = kind === "UPGRADE" || kind === "REPLACE";
-  const showLines = kind === "REPLACE" || kind === "PURCHASE";
+  // Solo una compra lleva lista: un reemplazo, un cambio o una mejora se piden con una frase.
+  const showLines = kind === "PURCHASE";
 
   function reset() {
     setKind(initialKind);
@@ -101,15 +96,6 @@ export function RequestDialog({
     setLines((current) => current.map((line, i) => (i === index ? { ...line, ...changes } : line)));
   }
 
-  /** Arranca un reemplazo con lo que la PC tiene hoy: se ajusta en vez de escribir todo de cero. */
-  function useCurrentComponents() {
-    const current = knownComponents.map((c) => ({
-      text: `${componentKindLabel(c.kind) ?? c.kind}: ${c.description}`,
-      qty: "",
-    }));
-    setLines((existing) => [...existing.filter((l) => l.text.trim()), ...current]);
-  }
-
   function submit() {
     if (cost.trim() && parseMoneyToCents(cost) == null) {
       toast.error("El costo estimado no es un número válido. Ejemplo: 45000");
@@ -126,7 +112,7 @@ export function RequestDialog({
         items: showLines
           ? lines.map((l) => ({
               text: l.text,
-              qty: kind === "PURCHASE" && Number(l.qty) > 0 ? Number(l.qty) : null,
+              qty: Number(l.qty) > 0 ? Number(l.qty) : null,
             }))
           : [],
         estimatedCostCents: parseMoneyToCents(cost),
@@ -202,53 +188,25 @@ export function RequestDialog({
 
           {showLines && (
             <div className="flex flex-col gap-2 rounded-lg border bg-slate-50 p-3">
-              <Label>
-                {kind === "REPLACE"
-                  ? "Componentes mínimos que tiene que tener el reemplazo"
-                  : "Detalle de lo que hay que comprar (opcional)"}
-              </Label>
-
-              {kind === "REPLACE" && (
-                <div className="flex flex-wrap gap-1.5">
-                  {knownComponents.length > 0 && (
-                    <Button type="button" variant="outline" size="sm" onClick={useCurrentComponents}>
-                      Partir de lo que tiene hoy
-                    </Button>
-                  )}
-                  {COMPONENT_KINDS.filter((c) => c.value !== "OTRO").map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => addLine(`${c.label}: `)}
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-slate-100"
-                    >
-                      + {c.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <Label>Detalle de lo que hay que comprar (opcional)</Label>
 
               {lines.map((line, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Input
                     value={line.text}
                     onChange={(e) => setLine(index, { text: e.target.value })}
-                    placeholder={
-                      kind === "REPLACE" ? "Ej: Memoria RAM: 8 GB o más" : "Ej: Cable USB-C de 1 metro"
-                    }
+                    placeholder="Ej: Cable USB-C de 1 metro"
                     autoFocus={line.text === ""}
                   />
-                  {kind === "PURCHASE" && (
-                    <Input
-                      type="number"
-                      min={1}
-                      value={line.qty}
-                      onChange={(e) => setLine(index, { qty: e.target.value })}
-                      placeholder="Cant."
-                      className="w-20"
-                      aria-label="Cantidad"
-                    />
-                  )}
+                  <Input
+                    type="number"
+                    min={1}
+                    value={line.qty}
+                    onChange={(e) => setLine(index, { qty: e.target.value })}
+                    placeholder="Cant."
+                    className="w-20"
+                    aria-label="Cantidad"
+                  />
                   <Button
                     type="button"
                     variant="ghost"
@@ -270,7 +228,7 @@ export function RequestDialog({
                 onClick={() => addLine()}
               >
                 <Plus className="size-4" />
-                {kind === "REPLACE" ? "Agregar otro componente" : "Agregar un ítem"}
+                Agregar un ítem
               </Button>
             </div>
           )}

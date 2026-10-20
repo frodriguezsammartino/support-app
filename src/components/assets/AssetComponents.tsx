@@ -94,8 +94,6 @@ export function AssetComponents({
     setEditText(row.description);
   }
 
-  const known = { [asset.id]: components.map((c) => ({ kind: c.kind, description: c.description })) };
-
   // Una PC sin piezas cargadas arranca con un formulario corto para completarla de una vez.
   if (components.length === 0) {
     return (
@@ -190,7 +188,6 @@ export function AssetComponents({
                 assets={[asset]}
                 assetId={asset.id}
                 lockAsset
-                componentsByAsset={known}
                 initialKind="UPGRADE"
                 initialComponent={row.kind}
                 initialTitle={`Cambiar ${(componentKindLabel(row.kind) ?? row.kind).toLowerCase()} (${row.description})`}

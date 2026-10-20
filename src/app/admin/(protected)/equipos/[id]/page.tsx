@@ -209,9 +209,6 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
               assets={[assetOption]}
               assetId={asset.id}
               lockAsset
-              componentsByAsset={{
-                [asset.id]: asset.components.map((c) => ({ kind: c.kind, description: c.description })),
-              }}
               trigger={
                 <Button variant="outline" size="sm">
                   <ClipboardList className="size-4" />
