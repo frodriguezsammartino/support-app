@@ -171,9 +171,6 @@ export function MaintenanceTable({
                         >
                           {task.title}
                         </Link>
-                        {task.description && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{task.description}</p>
-                        )}
                         {retirePending.has(task.id) && (
                           <p className="mt-1">
                             <RetirePendingBadge show />

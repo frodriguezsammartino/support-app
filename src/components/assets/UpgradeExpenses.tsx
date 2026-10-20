@@ -30,17 +30,20 @@ export type UpgradeExpenseRow = {
 };
 
 /**
- * El gasto de mantenimiento de los equipos: mejoras y repuestos que el técnico
- * pidió y el admin aprobó. Las pendientes se ven con su estimación pero no suman:
- * todavía no es plata gastada.
+ * Las mejoras y repuestos de los equipos: lo que el técnico pidió y el admin
+ * aprobó. Las pendientes se ven con su estimación pero no suman: todavía no es
+ * plata gastada. El técnico ve en qué quedó cada pedido, sin los montos.
  */
 export function UpgradeExpenses({
   rows,
   totals,
+  showMoney,
 }: {
   rows: UpgradeExpenseRow[];
   /** Total aprobado en la ventana, por moneda. */
   totals: Record<string, number>;
+  /** Solo el administrador ve los montos. */
+  showMoney: boolean;
 }) {
   const currencies = Object.keys(totals).sort();
 
@@ -49,7 +52,7 @@ export function UpgradeExpenses({
       <CardHeader>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <CardTitle className="text-sm font-semibold text-ink">Mejoras y repuestos</CardTitle>
-          {currencies.length > 0 && (
+          {showMoney && currencies.length > 0 && (
             <span className="text-sm text-ink-muted">
               Últimos {EXPENSE_WINDOW_MONTHS} meses:{" "}
               <span className="font-semibold text-ink">
@@ -75,7 +78,7 @@ export function UpgradeExpenses({
                 <TableHead>Equipo</TableHead>
                 <TableHead>Qué</TableHead>
                 <TableHead className="w-36">Pidió</TableHead>
-                <TableHead className="w-44 text-right">Costo</TableHead>
+                <TableHead className="w-44 text-right">{showMoney ? "Costo" : "Estado"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,7 +102,11 @@ export function UpgradeExpenses({
                     </TableCell>
                     <TableCell className="text-ink-muted">{r.requestedBy}</TableCell>
                     <TableCell className="text-right">
-                      {r.status === "APPROVED" ? (
+                      {!showMoney ? (
+                        <Badge className={STATUS_META[r.status].badgeClass}>
+                          {r.status === "APPROVED" ? "Aprobada" : "Sin aprobar"}
+                        </Badge>
+                      ) : r.status === "APPROVED" ? (
                         r.costCents ? (
                           <span className="tabular-nums text-ink">
                             {r.currency} {formatAmount(r.costCents)}
