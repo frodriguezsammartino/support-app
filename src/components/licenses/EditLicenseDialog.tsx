@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 export type EditableLicense = {
   id: string;
@@ -71,6 +72,7 @@ function toFormValues(license: EditableLicense): LicenseFormValues {
 
 export function EditLicenseDialog({ license }: { license: EditableLicense }) {
   const router = useRouter();
+  const showMoney = useIsAdmin();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<LicenseFormValues>(() => toFormValues(license));
   const [isPending, startTransition] = useTransition();
@@ -98,6 +100,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
 
         <LicenseFormFields
           group={groupOfKind(license.kind)}
+          showMoney={showMoney}
           values={values}
           onChange={(changes) => setValues((v) => ({ ...v, ...changes }))}
         />

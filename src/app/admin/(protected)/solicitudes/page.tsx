@@ -46,8 +46,10 @@ function RequestCard({ request, isAdmin }: { request: RequestItem; isAdmin: bool
   const component = componentLabel(request.component);
   const pending = request.status === "PENDING";
 
-  const costLine =
-    request.status === "APPROVED"
+  // La plata es del administrador: el técnico ve en qué quedó su pedido, no el monto.
+  const costLine = !isAdmin
+    ? null
+    : request.status === "APPROVED"
       ? money(request.costCents, request.currency)
       : money(request.estimatedCostCents, request.currency);
 

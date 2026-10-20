@@ -55,28 +55,47 @@ function toLicenseData(data: LicenseInput) {
 }
 
 export async function createLicense(input: LicenseInput): Promise<ActionResult> {
-  await requireStaff();
+  const role = await requireStaff();
 
   const parsed = createLicenseSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
   }
 
-  await db.license.create({ data: toLicenseData(parsed.data) });
+  // El técnico carga lo que es y cómo se usa; el costo lo completa el administrador.
+  const data = toLicenseData(parsed.data);
+  if (role === "TECH") data.costCents = null;
+
+  await db.license.create({ data });
 
   revalidateLicenses();
   return {};
 }
 
 export async function updateLicense(licenseId: string, input: LicenseInput): Promise<ActionResult> {
-  await requireStaff();
+  const role = await requireStaff();
 
   const parsed = updateLicenseSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
   }
 
-  await db.license.update({ where: { id: licenseId }, data: toLicenseData(parsed.data) });
+  const data = toLicenseData(parsed.data);
+
+  // El técnico no ve los costos, así que lo que manda no los incluye: se conservan
+  // los que ya estaban en vez de pisarlos con vacío.
+  if (role === "TECH") {
+    const current = await db.license.findUnique({
+      where: { id: licenseId },
+      select: { costCents: true, currency: true, billing: true },
+    });
+    if (!current) return { error: "No se encontró la licencia." };
+    data.costCents = current.costCents;
+    data.currency = current.currency;
+    data.billing = current.billing;
+  }
+
+  await db.license.update({ where: { id: licenseId }, data });
 
   revalidateLicenses();
   return {};

@@ -110,7 +110,7 @@ function ProductTable({
  * Qué software hay instalado, contado desde el inventario de equipos. No se carga
  * dos veces: el sistema operativo es un dato de cada equipo y esto lo suma.
  */
-export function OsInventory({ assets }: { assets: SoftwareAsset[] }) {
+export function SoftwareInventory({ assets }: { assets: SoftwareAsset[] }) {
   if (assets.length === 0) return null;
 
   const osRows = countBy(assets, "os");

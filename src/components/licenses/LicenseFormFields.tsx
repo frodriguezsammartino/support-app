@@ -451,7 +451,12 @@ export function LicenseFormFields({
   values,
   onChange,
   group,
-}: StepProps & { group: LicenseGroup }) {
+  showMoney = true,
+}: StepProps & {
+  group: LicenseGroup;
+  /** El técnico no ve ni edita los costos: se le esconde esa sección. */
+  showMoney?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-4">
       <Section title="Qué es">
@@ -466,9 +471,11 @@ export function LicenseFormFields({
           <StepBilling values={values} onChange={onChange} />
         </Section>
       )}
-      <Section title="Costo y periodicidad">
-        <StepCost values={values} onChange={onChange} />
-      </Section>
+      {showMoney && (
+        <Section title="Costo y periodicidad">
+          <StepCost values={values} onChange={onChange} />
+        </Section>
+      )}
       <Section title="Vencimiento y renovación">
         <StepRenewal values={values} onChange={onChange} />
       </Section>

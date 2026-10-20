@@ -38,6 +38,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 type StepId = "kind" | "name" | "billing" | "cost" | "renewal" | "notes";
 
@@ -96,7 +97,7 @@ function validateStep(step: StepId, values: LicenseFormValues): string | null {
   return null;
 }
 
-function Summary({ values }: { values: LicenseFormValues }) {
+function Summary({ values, showMoney }: { values: LicenseFormValues; showMoney: boolean }) {
   const cents = totalCostCents({
     costCents: parseMoneyToCents(values.cost),
     pricing: values.pricing,
@@ -113,10 +114,16 @@ function Summary({ values }: { values: LicenseFormValues }) {
         ? `${PRICING_LABELS[values.pricing]}, ${Number(values.seatsTotal) || 1} puesto${Number(values.seatsTotal) === 1 ? "" : "s"}`
         : PRICING_LABELS[values.pricing],
     ],
-    [
-      "Costo",
-      cents > 0 ? `${values.currency} ${formatAmount(cents)} · ${BILLING_LABELS[values.billing]}` : "Sin costo cargado",
-    ],
+    ...(showMoney
+      ? ([
+          [
+            "Costo",
+            cents > 0
+              ? `${values.currency} ${formatAmount(cents)} · ${BILLING_LABELS[values.billing]}`
+              : "Sin costo cargado",
+          ],
+        ] as [string, string][])
+      : []),
     [
       "Vencimiento",
       values.expiresAt
@@ -139,7 +146,9 @@ function Summary({ values }: { values: LicenseFormValues }) {
 
 export function LicenseWizard({ group }: { group: LicenseGroup }) {
   const router = useRouter();
-  const steps = STEPS[group];
+  // El costo lo completa el administrador: al técnico se le salta ese paso.
+  const isAdmin = useIsAdmin();
+  const steps = STEPS[group].filter((s) => isAdmin || s !== "cost");
   const copy = COPY[group];
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -262,7 +271,7 @@ export function LicenseWizard({ group }: { group: LicenseGroup }) {
           {step === "notes" && (
             <div className="flex flex-col gap-4">
               <StepNotes values={values} onChange={(c) => setValues((v) => ({ ...v, ...c }))} />
-              <Summary values={values} />
+              <Summary values={values} showMoney={isAdmin} />
             </div>
           )}
         </div>

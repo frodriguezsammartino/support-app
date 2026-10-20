@@ -4,6 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Ticket as TicketIcon, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
+import { getRole } from "@/lib/adminAuth";
 import {
   ASSET_STATUS_META,
   ASSET_TYPE_LABELS,
@@ -77,8 +78,9 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
   const openTickets = asset.tickets.filter((t) => t.status !== "COMPLETED");
 
   // Lo que se gastó en mejoras de este equipo, por moneda (nunca se suman monedas distintas).
+  const isAdmin = (await getRole()) === "ADMIN";
   const upgradeSpend = asset.requests
-    .filter((r) => r.kind === "UPGRADE" && r.status === "APPROVED" && r.costCents)
+    .filter((r) => isAdmin && r.kind === "UPGRADE" && r.status === "APPROVED" && r.costCents)
     .reduce<Record<string, number>>((acc, r) => {
       acc[r.currency] = (acc[r.currency] ?? 0) + (r.costCents ?? 0);
       return acc;
@@ -178,7 +180,22 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
 
           <div className="flex flex-wrap items-center gap-3">
             <EditAssetDialog
-              asset={asset}
+              asset={{
+                id: asset.id,
+                name: asset.name,
+                type: asset.type,
+                status: asset.status,
+                brand: asset.brand,
+                model: asset.model,
+                serialNumber: asset.serialNumber,
+                location: asset.location,
+                owner: asset.owner,
+                os: asset.os,
+                office: asset.office,
+                purchasedAt: asset.purchasedAt,
+                warrantyUntil: asset.warrantyUntil,
+                notes: asset.notes,
+              }}
               categories={categories}
               openTickets={unassignedTickets}
               hasOpenTicket={openTickets.length > 0}
@@ -227,9 +244,9 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
                 <p className="text-sm text-ink-muted">{r.reason}</p>
                 <p className="text-xs text-slate-400">
                   Pidió {r.requestedBy} el {format(r.createdAt, "dd/MM/yyyy")}
-                  {r.status === "APPROVED" && r.costCents
+                  {isAdmin && r.status === "APPROVED" && r.costCents
                     ? ` · costo ${r.currency} ${formatAmount(r.costCents)}`
-                    : r.status === "PENDING" && r.estimatedCostCents
+                    : isAdmin && r.status === "PENDING" && r.estimatedCostCents
                       ? ` · estimado ${r.currency} ${formatAmount(r.estimatedCostCents)}`
                       : ""}
                 </p>

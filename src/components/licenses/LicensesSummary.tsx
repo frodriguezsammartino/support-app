@@ -1,7 +1,7 @@
 import { formatAmount } from "@/lib/licenses";
 import { Card, CardContent } from "@/components/ui/card";
 
-type MoneyRow = { currency: string; cents: number };
+export type MoneyRow = { currency: string; cents: number };
 
 function CardTitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -12,18 +12,20 @@ function CardTitleBlock({ title, subtitle }: { title: string; subtitle?: string 
   );
 }
 
-/** Las dos cajas de plata son identicas: lo unico que cambia es el periodo. */
-function MoneyCard({
+/** Las cajas de plata son idénticas: lo único que cambia es el período. */
+export function MoneyCard({
   title,
   subtitle,
   rows,
   alert = false,
+  footer,
 }: {
   title: string;
   subtitle: string;
   rows: MoneyRow[];
   /** Plata desperdiciada: se marca en rojo para que no pase desapercibida. */
   alert?: boolean;
+  footer?: React.ReactNode;
 }) {
   const hasAmount = rows.some((r) => r.cents > 0);
   return (
@@ -55,14 +57,16 @@ function MoneyCard({
             ))}
           </div>
         )}
+
+        {footer}
       </CardContent>
     </Card>
   );
 }
 
 /**
- * Semaforo del inventario. Cada estado ocupa su propio bloque con el color de
- * fondo del pill correspondiente: asi se distinguen de un vistazo y el numero
+ * Semáforo de vencimientos. Cada estado ocupa su propio bloque con el color de
+ * fondo del pill correspondiente: así se distinguen de un vistazo y el número
  * no queda flotando en el medio de la tarjeta.
  */
 function TrafficItem({
@@ -84,52 +88,36 @@ function TrafficItem({
   );
 }
 
-export function LicensesSummary({
+/** Cuántas hay al día, por vencer y vencidas. Cada pestaña lo cuenta solo para lo suyo. */
+export function StatusCard({
+  title,
   active,
   expired,
   expiring,
-  monthRows,
-  monthLabel,
-  annualRows,
-  wastedRows,
 }: {
+  title: string;
   active: number;
   expired: number;
   expiring: number;
-  monthRows: MoneyRow[];
-  monthLabel: string;
-  annualRows: MoneyRow[];
-  wastedRows: MoneyRow[];
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Card>
-        <CardContent className="flex h-full flex-col gap-3 py-4">
-          <CardTitleBlock title="Licencias y servicios" subtitle={`${active} activas`} />
-          <div className="flex flex-1 items-stretch gap-2">
-            <TrafficItem
-              value={active - expiring - expired}
-              label="Al día"
-              className="bg-[#DCFCE7] text-[#166534]"
-            />
-            <TrafficItem
-              value={expiring}
-              label="Por vencer"
-              className="bg-[#FEF3C7] text-[#92400E]"
-            />
-            <TrafficItem value={expired} label="Vencidas" className="bg-[#FEE2E2] text-[#991B1B]" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <MoneyCard title="A pagar este mes" subtitle={monthLabel} rows={monthRows} />
-      <MoneyCard title="Gasto anual" subtitle="proyectado a 12 meses" rows={annualRows} />
-      <MoneyCard
-        title="Se paga sin usar"
-        subtitle="por año, solo licencias por puesto"
-        rows={wastedRows}
-        alert
-      />
-    </div>
+    <Card>
+      <CardContent className="flex h-full flex-col gap-3 py-4">
+        <CardTitleBlock title={title} subtitle={`${active} activa${active === 1 ? "" : "s"}`} />
+        <div className="flex flex-1 items-stretch gap-2">
+          <TrafficItem
+            value={active - expiring - expired}
+            label="Al día"
+            className="bg-[#DCFCE7] text-[#166534]"
+          />
+          <TrafficItem
+            value={expiring}
+            label="Por vencer"
+            className="bg-[#FEF3C7] text-[#92400E]"
+          />
+          <TrafficItem value={expired} label="Vencidas" className="bg-[#FEE2E2] text-[#991B1B]" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

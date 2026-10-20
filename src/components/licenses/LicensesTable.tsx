@@ -55,6 +55,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RetireControl, RetirePendingBadge } from "@/components/requests/RetireControl";
+import { useIsAdmin } from "@/components/RoleProvider";
 
 export type LicenseRow = EditableLicense & { code: number };
 
@@ -103,6 +104,8 @@ export function LicensesTable({
 }) {
   const copy = GROUP_COPY[group];
   const showSeats = group === "LICENSE";
+  // La plata es del administrador: el técnico ve vencimientos y puestos, no costos.
+  const showMoney = useIsAdmin();
   const router = useRouter();
   const retirePending = useMemo(() => new Set(retirePendingIds), [retirePendingIds]);
   const [isPending, startTransition] = useTransition();
@@ -269,6 +272,7 @@ export function LicensesTable({
                 </RecordField>
                 )}
 
+                {showMoney && (
                 <RecordField label="Costo">
                   {license.currency} {formatAmount(totalCostCents(license))}
                   <span className="block text-xs text-slate-400">
@@ -281,6 +285,7 @@ export function LicensesTable({
                     </span>
                   )}
                 </RecordField>
+                )}
 
                 <RecordField label="Vence">
                   <span className={`flex items-center justify-end gap-1.5 ${alertMeta.className}`}>
@@ -324,7 +329,7 @@ export function LicensesTable({
                   <TableHead className="w-14">#</TableHead>
                   <TableHead>{copy.column}</TableHead>
                   {showSeats && <TableHead className="w-56">Puestos</TableHead>}
-                  <TableHead className="w-44">Costo</TableHead>
+                  {showMoney && <TableHead className="w-44">Costo</TableHead>}
                   <TableHead className="w-48">Vence / se renueva</TableHead>
                   <TableHead className="w-32">Estado</TableHead>
                   <TableHead className="w-24" />
@@ -333,7 +338,7 @@ export function LicensesTable({
               <TableBody>
                 {visible.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={showSeats ? 7 : 6} className="py-8 text-center text-sm text-ink-muted">
+                    <TableCell colSpan={5 + (showSeats ? 1 : 0) + (showMoney ? 1 : 0)} className="py-8 text-center text-sm text-ink-muted">
                       {licenses.length === 0 ? copy.empty : "Nada coincide con estos filtros."}
                     </TableCell>
                   </TableRow>
@@ -410,6 +415,7 @@ export function LicensesTable({
                       </TableCell>
                       )}
 
+                      {showMoney && (
                       <TableCell>
                         <div className="flex flex-col leading-tight">
                           <span className="text-ink">
@@ -427,6 +433,7 @@ export function LicensesTable({
                           )}
                         </div>
                       </TableCell>
+                      )}
 
                       <TableCell>
                         <div className="flex flex-col leading-tight">
