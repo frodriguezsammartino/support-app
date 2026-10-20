@@ -8,7 +8,7 @@ export default async function HomePage() {
   const [pendientes, historial, categories, assets] = await Promise.all([
     db.ticket.findMany({
       where: { status: { in: ["BACKLOG", "IN_PROGRESS"] } },
-      include: { category: true },
+      include: { category: true, provider: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
     db.ticket.findMany({

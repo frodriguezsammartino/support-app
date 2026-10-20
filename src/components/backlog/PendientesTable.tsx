@@ -9,6 +9,7 @@ import { PriorityQuickEditor } from "@/components/tickets/PriorityQuickEditor";
 import { CategoryQuickEditor } from "@/components/tickets/CategoryQuickEditor";
 import { StatusQuickEditor } from "@/components/tickets/StatusQuickEditor";
 import { deleteTicket } from "@/lib/actions/tickets";
+import { ESCALATION_META, isOpenEscalation } from "@/lib/escalation";
 import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_RANK, STATUS_LABELS } from "@/lib/priority";
 import {
   Select,
@@ -26,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/components/RoleProvider";
 import {
@@ -40,7 +42,21 @@ import {
 } from "@/components/ui/record-list";
 import type { Category, Ticket, TicketStatus } from "@prisma/client";
 
-type TicketRow = Ticket & { category: Category | null };
+type TicketRow = Ticket & { category: Category | null; provider?: { name: string } | null };
+
+/** "Plustel · esperando hace 3 días": de quién se espera algo, sin abrir el ticket. */
+function EscalationBadge({ ticket }: { ticket: TicketRow }) {
+  if (!ticket.escalationStatus || !ticket.provider) return null;
+  const meta = ESCALATION_META[ticket.escalationStatus];
+  return (
+    <Badge className={meta.badgeClass}>
+      {ticket.provider.name} · {meta.short}
+      {ticket.escalatedAt && isOpenEscalation(ticket.escalationStatus)
+        ? ` hace ${formatDistanceToNow(ticket.escalatedAt, { locale: es })}`
+        : ""}
+    </Badge>
+  );
+}
 type SortField = "priority" | "waitTime" | "combined";
 
 const SORT_LABELS: Record<SortField, string> = {
@@ -67,6 +83,7 @@ export function PendientesTable({
   const [reporterFilter, setReporterFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
+  const [escalationFilter, setEscalationFilter] = useState<string>("ALL");
   const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
     field: "combined",
     dir: "desc",
@@ -83,6 +100,9 @@ export function PendientesTable({
       if (reporterFilter !== "ALL" && t.reporterName !== reporterFilter) return false;
       if (statusFilter !== "ALL" && t.status !== statusFilter) return false;
       if (priorityFilter !== "ALL" && t.priority !== priorityFilter) return false;
+      if (escalationFilter === "WITH" && !t.escalationStatus) return false;
+      if (escalationFilter === "WAITING" && !isOpenEscalation(t.escalationStatus)) return false;
+      if (escalationFilter === "NONE" && t.escalationStatus) return false;
       return true;
     });
 
@@ -99,7 +119,7 @@ export function PendientesTable({
       }
       return sort.dir === "asc" ? -diff : diff;
     });
-  }, [rows, categoryFilter, reporterFilter, statusFilter, priorityFilter, sort]);
+  }, [rows, categoryFilter, reporterFilter, statusFilter, priorityFilter, escalationFilter, sort]);
 
   function handleDelete(ticket: TicketRow) {
     if (!confirm(`¿Eliminar el ticket "${ticket.title}"? Esta acción no se puede deshacer.`)) return;
@@ -158,6 +178,30 @@ export function PendientesTable({
               <SelectItem value="ALL">Todos</SelectItem>
               <SelectItem value="BACKLOG">En Espera</SelectItem>
               <SelectItem value="IN_PROGRESS">En Progreso</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-ink-muted">Proveedor</span>
+          <Select value={escalationFilter} onValueChange={(v) => v && setEscalationFilter(v)}>
+            <SelectTrigger size="sm" className="w-52">
+              <SelectValue>
+                {(v: string) =>
+                  ({
+                    ALL: "Todos",
+                    WITH: "Escalados",
+                    WAITING: "Esperando a un proveedor",
+                    NONE: "Sin escalar",
+                  })[v] ?? "Todos"
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos</SelectItem>
+              <SelectItem value="WITH">Escalados</SelectItem>
+              <SelectItem value="WAITING">Esperando a un proveedor</SelectItem>
+              <SelectItem value="NONE">Sin escalar</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -234,6 +278,11 @@ export function PendientesTable({
                 }}
               />
             </RecordTop>
+            {ticket.escalationStatus && (
+              <p className="mt-1">
+                <EscalationBadge ticket={ticket} />
+              </p>
+            )}
 
             <RecordFields>
               <RecordField label="Reportado por">{ticket.reporterName}</RecordField>
@@ -304,6 +353,11 @@ export function PendientesTable({
                       <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-ink hover:underline">
                         {ticket.title}
                       </Link>
+                      {ticket.escalationStatus && (
+                        <p className="mt-1">
+                          <EscalationBadge ticket={ticket} />
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="text-ink-muted">{ticket.reporterName}</TableCell>
                     <TableCell>

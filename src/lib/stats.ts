@@ -120,6 +120,23 @@ export async function getOldestOpenTicketAgeHours(filters: StatsFilters = {}) {
   return (Date.now() - oldest.createdAt.getTime()) / 3_600_000;
 }
 
+/**
+ * Los tickets que están esperando algo de un proveedor (todavía no resolvió) y
+ * hace cuánto espera el más viejo. Es el estado de ahora: no se filtra por período.
+ */
+export async function getEscalationSnapshot() {
+  const waiting = await db.ticket.findMany({
+    where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
+    select: { escalatedAt: true },
+  });
+  const dates = waiting.map((t) => t.escalatedAt).filter((d): d is Date => d !== null);
+  const oldest = dates.length > 0 ? Math.min(...dates.map((d) => d.getTime())) : null;
+  return {
+    open: waiting.length,
+    oldestHours: oldest === null ? null : (Date.now() - oldest) / 3_600_000,
+  };
+}
+
 /** Los mantenimientos no se filtran por categoría: no tienen. Solo por período. */
 export async function getMaintenanceCompletionCount(filters: StatsFilters = {}) {
   // Solo lo que efectivamente se hizo: las observaciones sueltas no cuentan.

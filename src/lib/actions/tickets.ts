@@ -166,6 +166,10 @@ export async function completeTicket(_prevState: FormState, formData: FormData):
       completedAt: new Date(),
       startedAt: ticket.startedAt ?? new Date(),
       resolutionNote: parsed.data.resolutionNote,
+      // Si el ticket estaba escalado a un proveedor y se cierra, el escalamiento también está resuelto.
+      ...(ticket.escalationStatus && ticket.escalationStatus !== "RESOLVED"
+        ? { escalationStatus: "RESOLVED" as const }
+        : {}),
       statusHistory: {
         create: { fromStatus: ticket.status, toStatus: "COMPLETED", note: parsed.data.resolutionNote },
       },

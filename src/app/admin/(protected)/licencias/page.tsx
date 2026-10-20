@@ -15,9 +15,11 @@ import { LicensesTable, type LicenseRow } from "@/components/licenses/LicensesTa
 import { PaymentCalendar } from "@/components/licenses/PaymentCalendar";
 import { PaymentCalendarDialog } from "@/components/licenses/PaymentCalendarDialog";
 import { StatusCard } from "@/components/licenses/StatusCard";
+import { ProvidersTable, type ProviderRow } from "@/components/providers/ProvidersTable";
 import { PageTabs, type PageTab } from "@/components/ui/page-tabs";
 
 type LicenseRecord = Awaited<ReturnType<typeof db.license.findMany>>[number];
+type Vista = "LICENSE" | "SERVICE" | "PROVIDERS";
 
 /** Cuántas hay activas, por vencer y vencidas dentro de un grupo. */
 function statusOf(list: LicenseRecord[]) {
@@ -42,19 +44,41 @@ function toRows(totals: Record<string, number>, currencies: string[]): MoneyRow[
 }
 
 /**
- * Licencias y servicios, cada uno en su pestaña con su propio resumen. El resumen
- * de plata es solo del administrador; el técnico ve los vencimientos.
+ * Licencias, servicios y proveedores, cada uno en su pestaña. El resumen de plata
+ * es solo del administrador; el técnico ve los vencimientos.
  */
 export default async function LicenciasPage(props: PageProps<"/admin/licencias">) {
   const role = await getRole();
   const isAdmin = role === "ADMIN";
 
   const searchParams = await props.searchParams;
-  const group: LicenseGroup = searchParams?.vista === "servicios" ? "SERVICE" : "LICENSE";
+  const vista: Vista =
+    searchParams?.vista === "servicios"
+      ? "SERVICE"
+      : searchParams?.vista === "proveedores"
+        ? "PROVIDERS"
+        : "LICENSE";
+  const group: LicenseGroup = vista === "SERVICE" ? "SERVICE" : "LICENSE";
 
-  const [licenses, pendingRetire] = await Promise.all([
+  const [licenses, pendingRetire, waitingOnProviders, providers] = await Promise.all([
     db.license.findMany({ orderBy: { code: "asc" } }),
     getPendingRetireIds(),
+    // Para el aviso de la pestaña Proveedores: cuántos tickets esperan una respuesta.
+    db.ticket.count({
+      where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
+    }),
+    vista === "PROVIDERS"
+      ? db.provider.findMany({
+          orderBy: { name: "asc" },
+          include: {
+            tickets: {
+              where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
+              select: { id: true, number: true, escalationStatus: true },
+              orderBy: { number: "asc" },
+            },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   // Al técnico no le llega plata: ni en la pantalla ni en los datos de la página.
@@ -92,7 +116,38 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
       href: "/admin/licencias?vista=servicios",
       badge: badgeOf(statusOf(inGroup("SERVICE"))),
     },
+    {
+      key: "PROVIDERS",
+      label: "Proveedores",
+      href: "/admin/licencias?vista=proveedores",
+      badge:
+        waitingOnProviders > 0
+          ? { text: `${waitingOnProviders} esperando`, tone: "warning" }
+          : undefined,
+    },
   ];
+
+  if (vista === "PROVIDERS") {
+    const providerRows: ProviderRow[] = providers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      covers: p.covers,
+      contactName: p.contactName,
+      phone: p.phone,
+      email: p.email,
+      notes: p.notes,
+      open: p.tickets.flatMap((t) =>
+        t.escalationStatus ? [{ id: t.id, number: t.number, status: t.escalationStatus }] : []
+      ),
+    }));
+
+    return (
+      <div className="flex flex-col gap-4">
+        <PageTabs tabs={tabs} active={vista} />
+        <ProvidersTable providers={providerRows} />
+      </div>
+    );
+  }
 
   // El resumen y el calendario son de la pestaña elegida, no de todo junto.
   const mine = inGroup(group);
@@ -141,7 +196,7 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <PageTabs tabs={tabs} active={group} />
+          <PageTabs tabs={tabs} active={vista} />
         </div>
         {calendar && (
           <PaymentCalendarDialog>

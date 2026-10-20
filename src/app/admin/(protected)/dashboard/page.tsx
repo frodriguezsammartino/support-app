@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
+  getEscalationSnapshot,
   getKpis,
   getMaintenanceCompletionCount,
   getMaintenanceWeeklyTrend,
@@ -136,7 +137,17 @@ export default async function DashboardPage(props: PageProps<"/admin/dashboard">
 async function TareasTab({ range, categoryId }: { range: string; categoryId?: string }) {
   const filters: StatsFilters = { categoryId, from: rangeToFromDate(range) };
 
-  const [kpis, snapshot, byCategory, byPriority, resolutionByCategory, activity, oldestOpenHours, categories] =
+  const [
+    kpis,
+    snapshot,
+    byCategory,
+    byPriority,
+    resolutionByCategory,
+    activity,
+    oldestOpenHours,
+    categories,
+    escalations,
+  ] =
     await Promise.all([
       getKpis(filters),
       getOpenSnapshot(categoryId),
@@ -146,6 +157,7 @@ async function TareasTab({ range, categoryId }: { range: string; categoryId?: st
       getWeeklyActivity(filters),
       getOldestOpenTicketAgeHours(),
       db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      getEscalationSnapshot(),
     ]);
 
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;
@@ -162,6 +174,10 @@ async function TareasTab({ range, categoryId }: { range: string; categoryId?: st
         <KpiCard label="Urgentes sin resolver" value={String(snapshot.urgent)} />
         <KpiCard label="Sin clasificar" value={String(snapshot.untriaged)} />
         <KpiCard label="Espera del más viejo" value={formatHours(oldestOpenHours)} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Esperando a proveedores" value={String(escalations.open)} />
+        <KpiCard label="Espera más larga con un proveedor" value={formatHours(escalations.oldestHours)} />
       </div>
 
       <SectionTitle hint="según el período y la categoría del filtro">Rendimiento</SectionTitle>

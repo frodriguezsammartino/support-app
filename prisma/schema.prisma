@@ -50,10 +50,22 @@ model Ticket {
   /// Pedidos de cambio, mejora o reemplazo que salieron de este ticket.
   requests      Request[]
 
+  /// Escalamiento a un proveedor externo. Es una etiqueta aparte del estado del
+  /// ticket: un ticket escalado sigue "en progreso", solo que se espera una respuesta.
+  providerId        String?
+  provider          Provider?         @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  escalationStatus  EscalationStatus?
+  /// Con quién se habla en el proveedor. Arranca con el contacto del proveedor.
+  escalationContact String?
+  /// El número de reclamo o caso del lado del proveedor.
+  escalationRef     String?
+  escalatedAt       DateTime?
+
   @@index([status])
   @@index([categoryId])
   @@index([reporterEmail])
   @@index([assetId])
+  @@index([providerId])
 }
 
 model Comment {
@@ -366,4 +378,30 @@ model Request {
   @@index([licenseId])
   @@index([taskId])
   @@index([ticketId])
+}
+
+enum EscalationStatus {
+  /// Se le avisó al proveedor y se espera su respuesta.
+  WAITING
+  /// El proveedor ya lo está trabajando.
+  IN_PROGRESS
+  /// El proveedor lo resolvió.
+  RESOLVED
+}
+
+/// Un proveedor externo: quién es, qué cubre y con quién se habla. Los tickets se
+/// pueden escalar a uno de ellos.
+model Provider {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  /// Qué sistema o servicio le compramos o nos da soporte.
+  covers      String?
+  contactName String?
+  phone       String?
+  email       String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tickets Ticket[]
 }

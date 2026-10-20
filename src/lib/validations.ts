@@ -221,3 +221,26 @@ export const resolveRequestSchema = z.object({
   note: optionalText(1000),
   createTicket: z.boolean().optional(),
 });
+
+/** Un proveedor externo. Solo el nombre es obligatorio: el resto se completa de a poco. */
+export const providerSchema = z.object({
+  name: z.string().trim().min(2, "Ponele un nombre al proveedor").max(100),
+  covers: optionalText(200),
+  contactName: optionalText(120),
+  phone: optionalText(60),
+  email: optionalText(120).refine((v) => !v || /^\S+@\S+\.\S+$/.test(v), "El mail no es válido"),
+  notes: optionalText(2000),
+});
+
+export const escalateTicketSchema = z.object({
+  ticketId: z.string().min(1),
+  providerId: z.string().min(1, "Elegí el proveedor"),
+  contact: optionalText(120),
+  ref: optionalText(80),
+});
+
+export const updateEscalationSchema = z.object({
+  status: z.enum(["WAITING", "IN_PROGRESS", "RESOLVED"]).optional(),
+  contact: z.string().trim().max(120).nullable().optional(),
+  ref: z.string().trim().max(80).nullable().optional(),
+});
