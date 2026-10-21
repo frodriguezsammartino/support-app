@@ -9,6 +9,8 @@ datasource db {
 enum TicketStatus {
   BACKLOG
   IN_PROGRESS
+  /// Se llamó o se le pidió algo a un proveedor y se espera su respuesta.
+  WAITING_PROVIDER
   COMPLETED
 }
 

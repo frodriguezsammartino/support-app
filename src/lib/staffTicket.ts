@@ -50,12 +50,12 @@ export async function createStaffTicket(
     return { error: "Elegí una categoría" };
   }
 
-  let provider: { id: string; name: string; contactName: string | null } | null = null;
+  let provider: { id: string; name: string } | null = null;
   if (category.askProvider) {
     if (!data.providerId) return { error: "Elegí el proveedor" };
     provider = await db.provider.findUnique({
       where: { id: data.providerId },
-      select: { id: true, name: true, contactName: true },
+      select: { id: true, name: true },
     });
     if (!provider) return { error: "No se encontró el proveedor." };
   }
@@ -73,18 +73,19 @@ export async function createStaffTicket(
       categoryId: category.id,
       priority: data.priority,
       assetId: data.assetId || null,
-      statusHistory: { create: { toStatus: "BACKLOG", changedAt: createdAt } },
+      // Un problema con un proveedor nace en "Depende de proveedor".
+      status: provider ? "WAITING_PROVIDER" : "BACKLOG",
+      statusHistory: {
+        create: [
+          { toStatus: "BACKLOG", changedAt: createdAt },
+          ...(provider ? [{ fromStatus: "BACKLOG" as const, toStatus: "WAITING_PROVIDER" as const }] : []),
+        ],
+      },
       ...(provider && {
         providerId: provider.id,
-        escalationStatus: "WAITING" as const,
-        escalationContact: provider.contactName,
-        escalatedAt: new Date(),
+        startedAt: new Date(),
         comments: {
-          create: {
-            authorName: actorName(role),
-            isFromAdmin: true,
-            body: `Escalado a ${provider.name}${provider.contactName ? ` (contacto: ${provider.contactName})` : ""}. Estado: esperando respuesta.`,
-          },
+          create: { authorName: actorName(role), isFromAdmin: true, body: `Proveedor: ${provider.name}.` },
         },
       }),
     },

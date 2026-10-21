@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  getEscalationSnapshot,
+  getProviderWaitSnapshot,
   getKpis,
   getMaintenanceCompletionCount,
   getMaintenanceWeeklyTrend,
@@ -157,7 +157,7 @@ async function TareasTab({ range, categoryId }: { range: string; categoryId?: st
       getWeeklyActivity(filters),
       getOldestOpenTicketAgeHours(),
       db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
-      getEscalationSnapshot(),
+      getProviderWaitSnapshot(),
     ]);
 
   const resolutionRate = kpis.total > 0 ? Math.round((kpis.completed / kpis.total) * 100) : null;

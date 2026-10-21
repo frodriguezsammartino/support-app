@@ -67,17 +67,17 @@ export async function addComment(_prevState: FormState, formData: FormData): Pro
 
 export type ActionResult = { error?: string; code?: "MISSING_TRIAGE" };
 
-/** Mueve un ticket entre Backlog <-> En Progreso (en cualquier sentido). Completar requiere `completeTicket`. */
+/** Mueve un ticket entre En Espera, En Progreso y Depende de proveedor (en cualquier sentido). Completar requiere `completeTicket`. */
 export async function updateTicketStatus(
   ticketId: string,
-  toStatus: "BACKLOG" | "IN_PROGRESS"
+  toStatus: "BACKLOG" | "IN_PROGRESS" | "WAITING_PROVIDER"
 ): Promise<ActionResult> {
   await requireStaff();
 
   const ticket = await db.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket || ticket.status === "COMPLETED") return { error: "El ticket no se puede mover." };
 
-  if (toStatus === "IN_PROGRESS" && (!ticket.categoryId || !ticket.priority)) {
+  if (toStatus !== "BACKLOG" && (!ticket.categoryId || !ticket.priority)) {
     return { error: "Asigná categoría y urgencia antes de pasarlo a En Progreso.", code: "MISSING_TRIAGE" };
   }
 
@@ -85,7 +85,7 @@ export async function updateTicketStatus(
     where: { id: ticketId },
     data: {
       status: toStatus,
-      startedAt: toStatus === "IN_PROGRESS" && !ticket.startedAt ? new Date() : ticket.startedAt,
+      startedAt: toStatus !== "BACKLOG" && !ticket.startedAt ? new Date() : ticket.startedAt,
       statusHistory: {
         create: { fromStatus: ticket.status as TicketStatus, toStatus },
       },
@@ -166,10 +166,6 @@ export async function completeTicket(_prevState: FormState, formData: FormData):
       completedAt: new Date(),
       startedAt: ticket.startedAt ?? new Date(),
       resolutionNote: parsed.data.resolutionNote,
-      // Si el ticket estaba escalado a un proveedor y se cierra, el escalamiento también está resuelto.
-      ...(ticket.escalationStatus && ticket.escalationStatus !== "RESOLVED"
-        ? { escalationStatus: "RESOLVED" as const }
-        : {}),
       statusHistory: {
         create: { fromStatus: ticket.status, toStatus: "COMPLETED", note: parsed.data.resolutionNote },
       },
@@ -221,7 +217,7 @@ export async function triageAndStart(
 /** Reabre un ticket completado, devolviéndolo a Backlog o En Progreso. */
 export async function reopenTicket(
   ticketId: string,
-  toStatus: "BACKLOG" | "IN_PROGRESS"
+  toStatus: "BACKLOG" | "IN_PROGRESS" | "WAITING_PROVIDER"
 ): Promise<ActionResult> {
   await requireStaff();
 
@@ -246,7 +242,7 @@ export async function reopenTicket(
 
 /**
  * Carga un ticket desde la app. Queda a nombre de quien lo carga (el técnico o el
- * administrador). Si la categoría es un problema con proveedor, nace ya escalado.
+ * administrador). Si la categoría es un problema con proveedor, nace en "Depende de proveedor".
  */
 export async function createInternalTicket(input: StaffTicketInput): Promise<ActionResult> {
   const role = await requireStaff();

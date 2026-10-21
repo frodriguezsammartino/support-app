@@ -4,11 +4,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { actorName, adminOnly, requireStaff } from "@/lib/adminAuth";
 import {
-  escalateTicketSchema,
   providerSchema,
-  updateEscalationSchema,
 } from "@/lib/validations";
-import { ESCALATION_META, type EscalationStatus } from "@/lib/escalation";
 
 export type ActionResult = { error?: string };
 
@@ -69,28 +66,23 @@ export async function updateProvider(providerId: string, input: ProviderInput): 
 }
 
 /**
- * Borrar un proveedor es borrar: solo el administrador. Si todavía tiene tickets
- * escalados sin resolver no se puede, porque quedarían esperando a nadie.
+ * Borrar un proveedor es borrar: solo el administrador. Si todavía hay tickets
+ * esperando a ese proveedor no se puede, porque quedarían esperando a nadie.
  */
 export async function deleteProvider(providerId: string): Promise<ActionResult> {
   const denied = await adminOnly();
   if (denied) return denied;
 
-  const open = await db.ticket.count({
-    where: { providerId, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
-  });
+  const open = await db.ticket.count({ where: { providerId, status: "WAITING_PROVIDER" } });
   if (open > 0) {
     return {
-      error: `Tiene ${open} ticket${open === 1 ? "" : "s"} escalado${open === 1 ? "" : "s"} sin resolver. Resolvelos o pasalos a otro proveedor primero.`,
+      error: `Hay ${open} ticket${open === 1 ? "" : "s"} que depende${open === 1 ? "" : "n"} de este proveedor. Resolvelos o cambiales el proveedor primero.`,
     };
   }
 
+  // Los tickets ya cerrados pierden la etiqueta; el proveedor no se borra de su historia.
   await db.$transaction([
-    // Los ya resueltos pierden la etiqueta; la historia queda en las notas de cada ticket.
-    db.ticket.updateMany({
-      where: { providerId },
-      data: { escalationStatus: null, escalationContact: null, escalationRef: null, escalatedAt: null },
-    }),
+    db.ticket.updateMany({ where: { providerId }, data: { providerId: null } }),
     db.provider.delete({ where: { id: providerId } }),
   ]);
 
@@ -98,111 +90,33 @@ export async function deleteProvider(providerId: string): Promise<ActionResult> 
   return {};
 }
 
-// ------------------------------------------------------------------ escalamiento
+// ------------------------------------------------------------------ proveedor de un ticket
 
-export type EscalateInput = { ticketId: string; providerId: string; contact?: string | null; ref?: string | null };
-
-export async function escalateTicket(input: EscalateInput): Promise<ActionResult> {
+/** De qué proveedor depende el ticket. "" lo deja sin proveedor. Deja una nota para que quede la historia. */
+export async function setTicketProvider(ticketId: string, providerId: string): Promise<ActionResult> {
   const role = await requireStaff();
 
-  const parsed = escalateTicketSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
-  const { ticketId, providerId, contact, ref } = parsed.data;
-
-  const ticket = await db.ticket.findUnique({ where: { id: ticketId }, select: { status: true } });
+  const ticket = await db.ticket.findUnique({
+    where: { id: ticketId },
+    select: { providerId: true, status: true, provider: { select: { name: true } } },
+  });
   if (!ticket) return { error: "No se encontró el ticket." };
   if (ticket.status === "COMPLETED") return { error: "El ticket ya está resuelto." };
+  if ((ticket.providerId ?? "") === providerId) return {};
 
-  const provider = await db.provider.findUnique({ where: { id: providerId } });
-  if (!provider) return { error: "No se encontró el proveedor." };
+  let name: string | null = null;
+  if (providerId) {
+    const provider = await db.provider.findUnique({ where: { id: providerId }, select: { name: true } });
+    if (!provider) return { error: "No se encontró el proveedor." };
+    name = provider.name;
+  }
 
-  // El contacto arranca con el del proveedor, pero se puede cambiar para este caso.
-  const who = contact ?? provider.contactName ?? null;
-
-  await db.ticket.update({
-    where: { id: ticketId },
-    data: {
-      providerId,
-      escalationStatus: "WAITING",
-      escalationContact: who,
-      escalationRef: ref,
-      escalatedAt: new Date(),
-    },
-  });
-
+  await db.ticket.update({ where: { id: ticketId }, data: { providerId: providerId || null } });
   await leaveNote(
     ticketId,
     role,
-    `Escalado a ${provider.name}${who ? ` (contacto: ${who})` : ""}${ref ? `. Reclamo ${ref}` : ""}. Estado: ${ESCALATION_META.WAITING.label.toLowerCase()}.`
+    name ? `Proveedor: ${name}.` : `Se quitó el proveedor (${ticket.provider?.name ?? "sin nombre"}).`
   );
-
-  revalidateProviders(ticketId);
-  return {};
-}
-
-export type UpdateEscalationInput = {
-  status?: EscalationStatus;
-  contact?: string | null;
-  ref?: string | null;
-};
-
-export async function updateEscalation(ticketId: string, input: UpdateEscalationInput): Promise<ActionResult> {
-  const role = await requireStaff();
-
-  const parsed = updateEscalationSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
-
-  const ticket = await db.ticket.findUnique({
-    where: { id: ticketId },
-    select: { providerId: true, escalationStatus: true, escalationContact: true, escalationRef: true, provider: { select: { name: true } } },
-  });
-  if (!ticket || !ticket.providerId || !ticket.provider) return { error: "Este ticket no está escalado." };
-
-  const { status, contact, ref } = parsed.data;
-  const data: {
-    escalationStatus?: EscalationStatus;
-    escalationContact?: string | null;
-    escalationRef?: string | null;
-  } = {};
-  if (status) data.escalationStatus = status;
-  if (contact !== undefined) data.escalationContact = contact?.trim() || null;
-  if (ref !== undefined) data.escalationRef = ref?.trim() || null;
-  if (Object.keys(data).length === 0) return {};
-
-  await db.ticket.update({ where: { id: ticketId }, data });
-
-  if (status && status !== ticket.escalationStatus) {
-    await leaveNote(ticketId, role, `Escalamiento a ${ticket.provider.name}: ${ESCALATION_META[status].label.toLowerCase()}.`);
-  } else if (contact !== undefined || ref !== undefined) {
-    await leaveNote(ticketId, role, `Se actualizó el contacto o el número de reclamo del escalamiento a ${ticket.provider.name}.`);
-  }
-
-  revalidateProviders(ticketId);
-  return {};
-}
-
-/** Sacar el escalamiento: por ejemplo, si se escaló al proveedor equivocado. */
-export async function clearEscalation(ticketId: string): Promise<ActionResult> {
-  const role = await requireStaff();
-
-  const ticket = await db.ticket.findUnique({
-    where: { id: ticketId },
-    select: { providerId: true, provider: { select: { name: true } } },
-  });
-  if (!ticket || !ticket.providerId) return { error: "Este ticket no está escalado." };
-
-  await db.ticket.update({
-    where: { id: ticketId },
-    data: {
-      providerId: null,
-      escalationStatus: null,
-      escalationContact: null,
-      escalationRef: null,
-      escalatedAt: null,
-    },
-  });
-
-  await leaveNote(ticketId, role, `Se quitó el escalamiento a ${ticket.provider?.name ?? "el proveedor"}.`);
 
   revalidateProviders(ticketId);
   return {};

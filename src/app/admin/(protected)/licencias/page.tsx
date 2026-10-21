@@ -65,15 +65,15 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
     getPendingRetireIds(),
     // Para el aviso de la pestaña Proveedores: cuántos tickets esperan una respuesta.
     db.ticket.count({
-      where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
+      where: { status: "WAITING_PROVIDER" },
     }),
     vista === "PROVIDERS"
       ? db.provider.findMany({
           orderBy: { name: "asc" },
           include: {
             tickets: {
-              where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
-              select: { id: true, number: true, escalationStatus: true },
+              where: { status: "WAITING_PROVIDER" },
+              select: { id: true, number: true },
               orderBy: { number: "asc" },
             },
           },
@@ -124,7 +124,7 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
       href: "/admin/licencias?vista=proveedores",
       badge:
         waitingOnProviders > 0
-          ? { text: `${waitingOnProviders} esperando`, tone: "warning" }
+          ? { text: `${waitingOnProviders} en espera`, tone: "warning" }
           : undefined,
     },
   ];
@@ -138,9 +138,7 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
       phone: p.phone,
       email: p.email,
       notes: p.notes,
-      open: p.tickets.flatMap((t) =>
-        t.escalationStatus ? [{ id: t.id, number: t.number, status: t.escalationStatus }] : []
-      ),
+      open: p.tickets.map((t) => ({ id: t.id, number: t.number })),
     }));
 
     return (

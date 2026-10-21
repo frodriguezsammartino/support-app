@@ -10,7 +10,7 @@ export default async function HomePage() {
   const role = (await getRole()) ?? "TECH";
   const [pendientes, historial, allCategories, assets, providers] = await Promise.all([
     db.ticket.findMany({
-      where: { status: { in: ["BACKLOG", "IN_PROGRESS"] } },
+      where: { status: { not: "COMPLETED" } },
       include: { category: true, provider: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),

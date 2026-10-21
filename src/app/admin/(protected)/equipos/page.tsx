@@ -53,7 +53,7 @@ export default async function EquiposPage(props: PageProps<"/admin/equipos">) {
       : Promise.resolve([]),
     vista === "inventario"
       ? db.ticket.findMany({
-          where: { status: { in: ["BACKLOG", "IN_PROGRESS"] }, assetId: null },
+          where: { status: { not: "COMPLETED" }, assetId: null },
           select: { id: true, number: true, title: true },
           orderBy: { number: "desc" },
           take: 50,

@@ -9,7 +9,6 @@ import { PriorityQuickEditor } from "@/components/tickets/PriorityQuickEditor";
 import { CategoryQuickEditor } from "@/components/tickets/CategoryQuickEditor";
 import { StatusQuickEditor } from "@/components/tickets/StatusQuickEditor";
 import { deleteTicket } from "@/lib/actions/tickets";
-import { ESCALATION_META, isOpenEscalation } from "@/lib/escalation";
 import { PRIORITY_RANK } from "@/lib/priority";
 import {
   Table,
@@ -20,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/components/RoleProvider";
 import {
@@ -37,23 +35,10 @@ import type { Category, Ticket } from "@prisma/client";
 
 type TicketRow = Ticket & { category: Category | null; provider?: { name: string } | null };
 
-/** "Plustel · esperando hace 3 días": de quién se espera algo, sin abrir el ticket. */
-function EscalationBadge({ ticket }: { ticket: TicketRow }) {
-  if (!ticket.escalationStatus || !ticket.provider) return null;
-  const meta = ESCALATION_META[ticket.escalationStatus];
-  return (
-    <Badge className={meta.badgeClass}>
-      {ticket.provider.name} · {meta.short}
-      {ticket.escalatedAt && isOpenEscalation(ticket.escalationStatus)
-        ? ` hace ${formatDistanceToNow(ticket.escalatedAt, { locale: es })}`
-        : ""}
-    </Badge>
-  );
-}
-/** El técnico, salvo que el ticket esté escalado a un proveedor: ahí el responsable es el proveedor. */
-function Responsible({ ticket, techName }: { ticket: TicketRow; techName: string }) {
-  if (ticket.escalationStatus && ticket.provider) return <EscalationBadge ticket={ticket} />;
-  return <span className="text-ink-muted">{techName}</span>;
+/** De qué proveedor depende el ticket, solo el nombre: el estado ya lo dice. */
+function ProviderName({ ticket }: { ticket: TicketRow }) {
+  if (ticket.status !== "WAITING_PROVIDER" || !ticket.provider) return null;
+  return <span className="text-xs text-ink-muted">{ticket.provider.name}</span>;
 }
 
 function priorityRank(t: TicketRow) {
@@ -67,7 +52,7 @@ export function PendientesTable({
 }: {
   tickets: TicketRow[];
   categories: { id: string; name: string }[];
-  /** Quién lleva los tickets que no están con un proveedor. */
+  /** El responsable de los tickets: el técnico, aunque dependan de un proveedor. */
   techName: string;
 }) {
   const [rows, setRows] = useState(tickets);
@@ -121,7 +106,7 @@ export function PendientesTable({
             <RecordFields>
               <RecordField label="Reportado por">{ticket.reporterName}</RecordField>
               <RecordField label="Responsable">
-                <Responsible ticket={ticket} techName={techName} />
+                <span className="text-ink-muted">{techName}</span>
               </RecordField>
               <RecordField label="Categoría">
                 <CategoryQuickEditor
@@ -130,6 +115,9 @@ export function PendientesTable({
                   categories={categories}
                 />
               </RecordField>
+              {ticket.status === "WAITING_PROVIDER" && ticket.provider && (
+                <RecordField label="Proveedor">{ticket.provider.name}</RecordField>
+              )}
               <RecordField label="Urgencia">
                 <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
               </RecordField>
@@ -194,7 +182,7 @@ export function PendientesTable({
                     </TableCell>
                     <TableCell className="text-ink-muted">{ticket.reporterName}</TableCell>
                     <TableCell>
-                      <Responsible ticket={ticket} techName={techName} />
+                      <span className="text-ink-muted">{techName}</span>
                     </TableCell>
                     <TableCell>
                       <CategoryQuickEditor ticketId={ticket.id} categoryId={ticket.categoryId} categories={categories} />
@@ -203,18 +191,21 @@ export function PendientesTable({
                       <PriorityQuickEditor ticketId={ticket.id} priority={ticket.priority} />
                     </TableCell>
                     <TableCell>
-                      <StatusQuickEditor
-                        ticketId={ticket.id}
-                        title={ticket.title}
-                        status={ticket.status}
-                        categories={categories}
-                        onChanged={(newStatus) => {
-                          setRows((prev) => {
-                            if (newStatus === "COMPLETED") return prev.filter((t) => t.id !== ticket.id);
-                            return prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t));
-                          });
-                        }}
-                      />
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusQuickEditor
+                          ticketId={ticket.id}
+                          title={ticket.title}
+                          status={ticket.status}
+                          categories={categories}
+                          onChanged={(newStatus) => {
+                            setRows((prev) => {
+                              if (newStatus === "COMPLETED") return prev.filter((t) => t.id !== ticket.id);
+                              return prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t));
+                            });
+                          }}
+                        />
+                        <ProviderName ticket={ticket} />
+                      </div>
                     </TableCell>
                     <TableCell className="text-ink-muted">
                       hace {formatDistanceToNow(ticket.createdAt, { locale: es })}

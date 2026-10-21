@@ -12,7 +12,7 @@ import { TicketAdminControls } from "@/components/tickets/TicketAdminControls";
 import { TicketTitleEditor } from "@/components/tickets/TicketTitleEditor";
 import { TicketAssetEditor } from "@/components/assets/TicketAssetEditor";
 import { RequestDialog } from "@/components/requests/RequestDialog";
-import { TicketEscalation } from "@/components/providers/TicketEscalation";
+import { TicketProvider } from "@/components/providers/TicketProvider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,7 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
     // Aparte del ticket: el ticket viaja entero a componentes del navegador, y los costos no tienen que ir ahí.
     db.request.findMany({ where: { ticketId: id }, orderBy: { createdAt: "desc" } }),
     db.provider.findMany({
-      select: { id: true, name: true, contactName: true },
+      select: { id: true, name: true, contactName: true, phone: true, email: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -91,25 +91,9 @@ export default async function TicketDetailPage(props: PageProps<"/admin/tickets/
             <span className="text-sm text-ink-muted">Equipo:</span>
             <TicketAssetEditor ticketId={ticket.id} assetId={ticket.assetId} assets={assets} />
           </div>
-          {/* Escalar a un proveedor no cambia el estado del ticket: solo marca de quién se espera algo. */}
-          <TicketEscalation
-            ticketId={ticket.id}
-            ticketCompleted={ticket.status === "COMPLETED"}
-            providers={providers}
-            escalation={
-              ticket.provider && ticket.escalationStatus && ticket.escalatedAt
-                ? {
-                    providerName: ticket.provider.name,
-                    phone: ticket.provider.phone,
-                    email: ticket.provider.email,
-                    contact: ticket.escalationContact,
-                    ref: ticket.escalationRef,
-                    status: ticket.escalationStatus,
-                    escalatedAt: ticket.escalatedAt,
-                  }
-                : null
-            }
-          />
+          {ticket.status !== "COMPLETED" && (ticket.status === "WAITING_PROVIDER" || ticket.providerId) && (
+            <TicketProvider ticketId={ticket.id} providerId={ticket.providerId} providers={providers} />
+          )}
           {/* Si arreglarlo no alcanza, el pedido sale de acá y queda enlazado a este ticket. */}
           <div>
             <RequestDialog

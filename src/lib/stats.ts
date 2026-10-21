@@ -107,7 +107,7 @@ export async function getTicketsByPriority(filters: StatsFilters = {}) {
 
 /** Antigüedad del ticket abierto más viejo, en horas. Null si no hay ninguno abierto. */
 export async function getOldestOpenTicketAgeHours(filters: StatsFilters = {}) {
-  const prismaWhere: Record<string, unknown> = { status: { in: ["BACKLOG", "IN_PROGRESS"] } };
+  const prismaWhere: Record<string, unknown> = { status: { not: "COMPLETED" } };
   if (filters.from) prismaWhere.createdAt = { gte: filters.from };
   if (filters.categoryId) prismaWhere.categoryId = filters.categoryId;
 
@@ -121,19 +121,27 @@ export async function getOldestOpenTicketAgeHours(filters: StatsFilters = {}) {
 }
 
 /**
- * Los tickets que están esperando algo de un proveedor (todavía no resolvió) y
- * hace cuánto espera el más viejo. Es el estado de ahora: no se filtra por período.
+ * Los tickets que dependen de un proveedor y hace cuánto espera el más viejo. Es el
+ * estado de ahora: no se filtra por período.
  */
-export async function getEscalationSnapshot() {
+export async function getProviderWaitSnapshot() {
   const waiting = await db.ticket.findMany({
-    where: { status: { not: "COMPLETED" }, escalationStatus: { in: ["WAITING", "IN_PROGRESS"] } },
-    select: { escalatedAt: true },
+    where: { status: "WAITING_PROVIDER" },
+    select: {
+      updatedAt: true,
+      statusHistory: {
+        where: { toStatus: "WAITING_PROVIDER" },
+        orderBy: { changedAt: "desc" },
+        take: 1,
+        select: { changedAt: true },
+      },
+    },
   });
-  const dates = waiting.map((t) => t.escalatedAt).filter((d): d is Date => d !== null);
-  const oldest = dates.length > 0 ? Math.min(...dates.map((d) => d.getTime())) : null;
+  // Desde que pasó a "Depende de proveedor"; si no hay registro, desde el último cambio.
+  const since = waiting.map((t) => (t.statusHistory[0]?.changedAt ?? t.updatedAt).getTime());
   return {
     open: waiting.length,
-    oldestHours: oldest === null ? null : (Date.now() - oldest) / 3_600_000,
+    oldestHours: since.length === 0 ? null : (Date.now() - Math.min(...since)) / 3_600_000,
   };
 }
 
@@ -220,7 +228,7 @@ export async function getWeeklyActivity(filters: StatsFilters = {}) {
  * abierto hace seis meses sigue abierto hoy, aunque el filtro diga "última semana".
  */
 export async function getOpenSnapshot(categoryId?: string) {
-  const where: Record<string, unknown> = { status: { in: ["BACKLOG", "IN_PROGRESS"] } };
+  const where: Record<string, unknown> = { status: { not: "COMPLETED" } };
   if (categoryId) where.categoryId = categoryId;
 
   const [open, urgent, untriaged] = await Promise.all([

@@ -43,12 +43,14 @@ export const PRIORITY_RANK: Record<TicketPriority, number> = {
 export const STATUS_LABELS = {
   BACKLOG: "En Espera",
   IN_PROGRESS: "En Progreso",
+  WAITING_PROVIDER: "Depende de proveedor",
   COMPLETED: "Completado",
 } as const;
 
 export const STATUS_DOT: Record<keyof typeof STATUS_LABELS, string> = {
   BACKLOG: "bg-[#94A3B8]",
   IN_PROGRESS: "bg-[#075573]",
+  WAITING_PROVIDER: "bg-[#D97706]",
   COMPLETED: "bg-[#16A34A]",
 };
 
@@ -56,11 +58,13 @@ export const STATUS_DOT: Record<keyof typeof STATUS_LABELS, string> = {
 export const STATUS_CHIP: Record<keyof typeof STATUS_LABELS, string> = {
   BACKLOG: "bg-[#E2E8F0] text-[#334155] border-[#CBD5E1]",
   IN_PROGRESS: "bg-[#DBEAFE] text-[#075573] border-[#BFDBFE]",
+  WAITING_PROVIDER: "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]",
   COMPLETED: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
 };
 
 export const STATUS_PILL: Record<keyof typeof STATUS_LABELS, string> = {
   BACKLOG: PILL.neutral,
   IN_PROGRESS: PILL.brand,
+  WAITING_PROVIDER: PILL.warning,
   COMPLETED: PILL.success,
 };

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import type { TicketStatus } from "@prisma/client";
 
-const OPTIONS: TicketStatus[] = ["BACKLOG", "IN_PROGRESS", "COMPLETED"];
+const OPTIONS: TicketStatus[] = ["BACKLOG", "IN_PROGRESS", "WAITING_PROVIDER", "COMPLETED"];
 
 export function StatusQuickEditor({
   ticketId,

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteProvider } from "@/lib/actions/providers";
-import { ESCALATION_META, type EscalationStatus } from "@/lib/escalation";
 import { useIsAdmin } from "@/components/RoleProvider";
 import { ProviderDialog, type EditableProvider } from "./ProviderDialog";
 import {
@@ -19,6 +18,7 @@ import {
   RecordFields,
   RecordTop,
 } from "@/components/ui/record-list";
+import { PILL } from "@/lib/pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,8 +32,8 @@ import {
 } from "@/components/ui/table";
 
 export type ProviderRow = EditableProvider & {
-  /** Tickets escalados a este proveedor que todavía no resolvió. */
-  open: { id: string; number: number; status: EscalationStatus }[];
+  /** Tickets que dependen de este proveedor y todavía no se resolvieron. */
+  open: { id: string; number: number }[];
 };
 
 function Contact({ provider }: { provider: ProviderRow }) {
@@ -65,9 +65,7 @@ function InProgress({ provider }: { provider: ProviderRow }) {
     <div className="flex flex-wrap gap-1.5">
       {provider.open.map((t) => (
         <Link key={t.id} href={`/admin/tickets/${t.id}`}>
-          <Badge className={ESCALATION_META[t.status].badgeClass}>
-            #{t.number} · {ESCALATION_META[t.status].short}
-          </Badge>
+          <Badge className={PILL.warning}>#{t.number}</Badge>
         </Link>
       ))}
     </div>

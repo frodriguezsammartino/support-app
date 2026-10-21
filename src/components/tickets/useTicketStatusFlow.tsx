@@ -11,7 +11,9 @@ import { SuccessCelebration } from "@/components/backlog/SuccessCelebration";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { TicketStatus } from "@prisma/client";
 
-const RANK: Record<TicketStatus, number> = { BACKLOG: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+const RANK: Record<TicketStatus, number> = { BACKLOG: 0, IN_PROGRESS: 1, WAITING_PROVIDER: 1, COMPLETED: 2 };
+
+type OpenStatus = "BACKLOG" | "IN_PROGRESS" | "WAITING_PROVIDER";
 
 type TicketRef = { id: string; title: string; status: TicketStatus };
 
@@ -48,7 +50,7 @@ export function useTicketStatusFlow({
       return;
     }
 
-    const result = await updateTicketStatus(ticket.id, target as "BACKLOG" | "IN_PROGRESS");
+    const result = await updateTicketStatus(ticket.id, target as OpenStatus);
     if (result.error) {
       if (result.code === "MISSING_TRIAGE") {
         setTriageTarget(ticket);
@@ -110,8 +112,8 @@ export function useTicketStatusFlow({
           const { ticket, to } = backwardTarget;
           const call =
             ticket.status === "COMPLETED"
-              ? reopenTicket(ticket.id, to as "BACKLOG" | "IN_PROGRESS")
-              : updateTicketStatus(ticket.id, to as "BACKLOG" | "IN_PROGRESS");
+              ? reopenTicket(ticket.id, to as OpenStatus)
+              : updateTicketStatus(ticket.id, to as OpenStatus);
           call.then((result) => {
             setBackwardPending(false);
             if (result.error) {

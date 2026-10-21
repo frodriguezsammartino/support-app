@@ -32,6 +32,7 @@ export function TasksSummary({ tickets }: { tickets: Ticket[] }) {
 
   const untriaged = tickets.filter((t) => !t.priority || !t.categoryId).length;
   const inProgress = tickets.filter((t) => t.status === "IN_PROGRESS").length;
+  const withProvider = tickets.filter((t) => t.status === "WAITING_PROVIDER").length;
 
   return (
     <Card>
@@ -43,6 +44,7 @@ export function TasksSummary({ tickets }: { tickets: Ticket[] }) {
           <span className="text-xs text-slate-400">
             {tickets.length} sin resolver
             {inProgress > 0 && ` · ${inProgress} en progreso`}
+            {withProvider > 0 && ` · ${withProvider} dependen de un proveedor`}
           </span>
         </div>
 

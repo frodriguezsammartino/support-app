@@ -241,16 +241,3 @@ export const providerSchema = z.object({
   email: optionalText(120).refine((v) => !v || /^\S+@\S+\.\S+$/.test(v), "El mail no es válido"),
   notes: optionalText(2000),
 });
-
-export const escalateTicketSchema = z.object({
-  ticketId: z.string().min(1),
-  providerId: z.string().min(1, "Elegí el proveedor"),
-  contact: optionalText(120),
-  ref: optionalText(80),
-});
-
-export const updateEscalationSchema = z.object({
-  status: z.enum(["WAITING", "IN_PROGRESS", "RESOLVED"]).optional(),
-  contact: z.string().trim().max(120).nullable().optional(),
-  ref: z.string().trim().max(80).nullable().optional(),
-});

@@ -56,7 +56,7 @@ export default async function AssetDetailPage(props: PageProps<"/admin/equipos/[
   const [categories, unassignedTickets] = await Promise.all([
     db.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.ticket.findMany({
-      where: { status: { in: ["BACKLOG", "IN_PROGRESS"] }, assetId: null },
+      where: { status: { not: "COMPLETED" }, assetId: null },
       select: { id: true, number: true, title: true },
       orderBy: { number: "desc" },
       take: 50,
