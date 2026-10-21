@@ -23,6 +23,10 @@ model Category {
   id      String   @id @default(cuid())
   name    String   @unique
   active  Boolean  @default(true)
+  /// Al cargar un ticket de esta categoría, pregunta qué equipo es.
+  askAsset    Boolean @default(false)
+  /// Al cargar un ticket de esta categoría, pregunta qué proveedor es (y lo escala).
+  askProvider Boolean @default(false)
   tickets Ticket[]
 }
 

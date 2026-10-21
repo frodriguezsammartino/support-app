@@ -35,6 +35,14 @@ function revalidateLicenses() {
   revalidatePath("/admin/dashboard");
 }
 
+/** Un servicio con un proveedor que todavía no está cargado lo suma a la lista de Proveedores. */
+async function ensureProvider(kind: string, vendor?: string | null) {
+  const name = vendor?.trim();
+  if (!name || kind === "SOFTWARE") return;
+  const existing = await db.provider.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
+  if (!existing) await db.provider.create({ data: { name } });
+}
+
 function toLicenseData(data: LicenseInput) {
   return {
     name: data.name,
@@ -67,6 +75,7 @@ export async function createLicense(input: LicenseInput): Promise<ActionResult> 
   if (role === "TECH") data.costCents = null;
 
   await db.license.create({ data });
+  await ensureProvider(data.kind, data.vendor);
 
   revalidateLicenses();
   return {};
@@ -96,6 +105,7 @@ export async function updateLicense(licenseId: string, input: LicenseInput): Pro
   }
 
   await db.license.update({ where: { id: licenseId }, data });
+  await ensureProvider(data.kind, data.vendor);
 
   revalidateLicenses();
   return {};

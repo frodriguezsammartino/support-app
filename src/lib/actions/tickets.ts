@@ -3,12 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { actorName, adminOnly, requireStaff } from "@/lib/adminAuth";
+import { actorName, adminOnly, reporterFor, requireStaff } from "@/lib/adminAuth";
+import { createStaffTicket, type StaffTicketInput } from "@/lib/staffTicket";
 import { sendTicketCompletedEmail } from "@/lib/email";
 import {
   addCommentSchema,
   completeTicketSchema,
-  createInternalTicketSchema,
   createTicketSchema,
 } from "@/lib/validations";
 import type { TicketPriority, TicketStatus } from "@prisma/client";
@@ -244,42 +244,11 @@ export async function reopenTicket(
   return {};
 }
 
-/** El técnico carga una tarea para sí mismo, sin pasar por el formulario público. */
-export async function createInternalTicket(input: {
-  title: string;
-  description?: string;
-  categoryId: string;
-  priority: TicketPriority;
-  reporterName?: string;
-  assetId?: string;
-  createdAt?: Date | null;
-}): Promise<ActionResult> {
+/**
+ * Carga un ticket desde la app. Queda a nombre de quien lo carga (el técnico o el
+ * administrador). Si la categoría es un problema con proveedor, nace ya escalado.
+ */
+export async function createInternalTicket(input: StaffTicketInput): Promise<ActionResult> {
   const role = await requireStaff();
-
-  const parsed = createInternalTicketSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Revisá los datos." };
-  }
-
-  // Permite fechar el ticket cuando realmente pasó, no cuando el técnico se acordó.
-  const createdAt = parsed.data.createdAt ?? new Date();
-
-  await db.ticket.create({
-    data: {
-      createdAt,
-      reporterName: parsed.data.reporterName?.trim() || actorName(role, "Técnico"),
-      reporterEmail: null,
-      title: parsed.data.title,
-      description: parsed.data.description ?? "",
-      categoryId: parsed.data.categoryId,
-      priority: parsed.data.priority,
-      assetId: parsed.data.assetId || null,
-      statusHistory: { create: { toStatus: "BACKLOG", changedAt: createdAt } },
-    },
-  });
-
-  revalidatePath("/admin");
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/equipos");
-  return {};
+  return createStaffTicket(role, input, reporterFor(role));
 }

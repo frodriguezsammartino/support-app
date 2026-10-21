@@ -70,7 +70,13 @@ function toFormValues(license: EditableLicense): LicenseFormValues {
   };
 }
 
-export function EditLicenseDialog({ license }: { license: EditableLicense }) {
+export function EditLicenseDialog({
+  license,
+  providerNames,
+}: {
+  license: EditableLicense;
+  providerNames?: string[];
+}) {
   const router = useRouter();
   const showMoney = useIsAdmin();
   const [open, setOpen] = useState(false);
@@ -101,6 +107,7 @@ export function EditLicenseDialog({ license }: { license: EditableLicense }) {
         <LicenseFormFields
           group={groupOfKind(license.kind)}
           showMoney={showMoney}
+          providerNames={providerNames}
           values={values}
           onChange={(changes) => setValues((v) => ({ ...v, ...changes }))}
         />

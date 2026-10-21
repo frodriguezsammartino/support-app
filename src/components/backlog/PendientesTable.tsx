@@ -4,20 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { PriorityQuickEditor } from "@/components/tickets/PriorityQuickEditor";
 import { CategoryQuickEditor } from "@/components/tickets/CategoryQuickEditor";
 import { StatusQuickEditor } from "@/components/tickets/StatusQuickEditor";
 import { deleteTicket } from "@/lib/actions/tickets";
 import { ESCALATION_META, isOpenEscalation } from "@/lib/escalation";
-import { PRIORITY_META, PRIORITY_ORDER, PRIORITY_RANK, STATUS_LABELS } from "@/lib/priority";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PRIORITY_RANK } from "@/lib/priority";
 import {
   Table,
   TableBody,
@@ -40,7 +33,7 @@ import {
   RecordFields,
   RecordTop,
 } from "@/components/ui/record-list";
-import type { Category, Ticket, TicketStatus } from "@prisma/client";
+import type { Category, Ticket } from "@prisma/client";
 
 type TicketRow = Ticket & { category: Category | null; provider?: { name: string } | null };
 
@@ -57,13 +50,11 @@ function EscalationBadge({ ticket }: { ticket: TicketRow }) {
     </Badge>
   );
 }
-type SortField = "priority" | "waitTime" | "combined";
-
-const SORT_LABELS: Record<SortField, string> = {
-  priority: "Urgencia",
-  waitTime: "Tiempo en espera",
-  combined: "Urgencia + tiempo en espera",
-};
+/** El técnico, salvo que el ticket esté escalado a un proveedor: ahí el responsable es el proveedor. */
+function Responsible({ ticket, techName }: { ticket: TicketRow; techName: string }) {
+  if (ticket.escalationStatus && ticket.provider) return <EscalationBadge ticket={ticket} />;
+  return <span className="text-ink-muted">{techName}</span>;
+}
 
 function priorityRank(t: TicketRow) {
   return t.priority ? PRIORITY_RANK[t.priority] : 0;
@@ -72,54 +63,24 @@ function priorityRank(t: TicketRow) {
 export function PendientesTable({
   tickets,
   categories,
+  techName,
 }: {
   tickets: TicketRow[];
   categories: { id: string; name: string }[];
+  /** Quién lleva los tickets que no están con un proveedor. */
+  techName: string;
 }) {
   const [rows, setRows] = useState(tickets);
   const isAdmin = useIsAdmin();
 
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
-  const [reporterFilter, setReporterFilter] = useState<string>("ALL");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
-  const [escalationFilter, setEscalationFilter] = useState<string>("ALL");
-  const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
-    field: "combined",
-    dir: "desc",
-  });
-
-  const reporters = useMemo(
-    () => Array.from(new Set(rows.map((t) => t.reporterName))).sort(),
+  // Siempre de más a menos urgente; entre iguales, el que espera hace más tiempo va primero.
+  const visibleRows = useMemo(
+    () =>
+      [...rows].sort(
+        (a, b) => priorityRank(b) - priorityRank(a) || a.createdAt.getTime() - b.createdAt.getTime()
+      ),
     [rows]
   );
-
-  const visibleRows = useMemo(() => {
-    const result = rows.filter((t) => {
-      if (categoryFilter !== "ALL" && t.categoryId !== categoryFilter) return false;
-      if (reporterFilter !== "ALL" && t.reporterName !== reporterFilter) return false;
-      if (statusFilter !== "ALL" && t.status !== statusFilter) return false;
-      if (priorityFilter !== "ALL" && t.priority !== priorityFilter) return false;
-      if (escalationFilter === "WITH" && !t.escalationStatus) return false;
-      if (escalationFilter === "WAITING" && !isOpenEscalation(t.escalationStatus)) return false;
-      if (escalationFilter === "NONE" && t.escalationStatus) return false;
-      return true;
-    });
-
-    return [...result].sort((a, b) => {
-      let diff: number;
-      if (sort.field === "combined") {
-        // Más urgente primero; entre iguales, el que espera hace más tiempo primero.
-        diff = priorityRank(b) - priorityRank(a) || a.createdAt.getTime() - b.createdAt.getTime();
-      } else if (sort.field === "priority") {
-        diff = priorityRank(a) - priorityRank(b);
-      } else {
-        // Tiempo en espera: fecha de creación más vieja = más tiempo esperando.
-        diff = b.createdAt.getTime() - a.createdAt.getTime();
-      }
-      return sort.dir === "asc" ? -diff : diff;
-    });
-  }, [rows, categoryFilter, reporterFilter, statusFilter, priorityFilter, escalationFilter, sort]);
 
   function handleDelete(ticket: TicketRow) {
     if (!confirm(`¿Eliminar el ticket "${ticket.title}"? Esta acción no se puede deshacer.`)) return;
@@ -129,131 +90,9 @@ export function PendientesTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Categoría</span>
-          <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v)}>
-            <SelectTrigger size="sm" className="w-44">
-              <SelectValue>
-                {(v: string) => (v === "ALL" ? "Todas" : categories.find((c) => c.id === v)?.name ?? "Todas")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todas</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Reportado por</span>
-          <Select value={reporterFilter} onValueChange={(v) => v && setReporterFilter(v)}>
-            <SelectTrigger size="sm" className="w-44">
-              <SelectValue>{(v: string) => (v === "ALL" ? "Todos" : v)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              {reporters.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Estado</span>
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger size="sm" className="w-40">
-              <SelectValue>
-                {(v: string) => (v === "ALL" ? "Todos" : STATUS_LABELS[v as TicketStatus])}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="BACKLOG">En Espera</SelectItem>
-              <SelectItem value="IN_PROGRESS">En Progreso</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Proveedor</span>
-          <Select value={escalationFilter} onValueChange={(v) => v && setEscalationFilter(v)}>
-            <SelectTrigger size="sm" className="w-52">
-              <SelectValue>
-                {(v: string) =>
-                  ({
-                    ALL: "Todos",
-                    WITH: "Escalados",
-                    WAITING: "Esperando a un proveedor",
-                    NONE: "Sin escalar",
-                  })[v] ?? "Todos"
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="WITH">Escalados</SelectItem>
-              <SelectItem value="WAITING">Esperando a un proveedor</SelectItem>
-              <SelectItem value="NONE">Sin escalar</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Urgencia</span>
-          <Select value={priorityFilter} onValueChange={(v) => v && setPriorityFilter(v)}>
-            <SelectTrigger size="sm" className="w-40">
-              <SelectValue placeholder="Todas">
-                {(v: string) => (v === "ALL" ? "Todas" : PRIORITY_META[v as keyof typeof PRIORITY_META]?.label)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todas</SelectItem>
-              {PRIORITY_ORDER.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {PRIORITY_META[p].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-ink-muted">Ordenar por</span>
-          <div className="flex gap-1">
-            <Select value={sort.field} onValueChange={(v) => v && setSort((s) => ({ ...s, field: v as SortField }))}>
-              <SelectTrigger size="sm" className="w-52">
-                <SelectValue>{(v: string) => SORT_LABELS[v as SortField]}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="combined">Urgencia + tiempo en espera</SelectItem>
-                <SelectItem value="priority">Urgencia</SelectItem>
-                <SelectItem value="waitTime">Tiempo en espera</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
-              title={sort.dir === "asc" ? "Ascendente" : "Descendente"}
-            >
-              {sort.dir === "asc" ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <MobileRecords>
         {visibleRows.length === 0 && (
-          <EmptyRecords>No hay incidentes que coincidan con estos filtros.</EmptyRecords>
+          <EmptyRecords>No hay tickets pendientes.</EmptyRecords>
         )}
 
         {visibleRows.map((ticket) => (
@@ -278,14 +117,12 @@ export function PendientesTable({
                 }}
               />
             </RecordTop>
-            {ticket.escalationStatus && (
-              <p className="mt-1">
-                <EscalationBadge ticket={ticket} />
-              </p>
-            )}
 
             <RecordFields>
               <RecordField label="Reportado por">{ticket.reporterName}</RecordField>
+              <RecordField label="Responsable">
+                <Responsible ticket={ticket} techName={techName} />
+              </RecordField>
               <RecordField label="Categoría">
                 <CategoryQuickEditor
                   ticketId={ticket.id}
@@ -328,6 +165,7 @@ export function PendientesTable({
                   <TableHead>#</TableHead>
                   <TableHead>Ticket</TableHead>
                   <TableHead>Reportado por</TableHead>
+                  <TableHead>Responsable</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Urgencia</TableHead>
                   <TableHead>Estado</TableHead>
@@ -338,8 +176,8 @@ export function PendientesTable({
               <TableBody>
                 {visibleRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-sm text-ink-muted">
-                      No hay incidentes que coincidan con estos filtros.
+                    <TableCell colSpan={9} className="py-8 text-center text-sm text-ink-muted">
+                      No hay tickets pendientes.
                     </TableCell>
                   </TableRow>
                 )}
@@ -353,13 +191,11 @@ export function PendientesTable({
                       <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-ink hover:underline">
                         {ticket.title}
                       </Link>
-                      {ticket.escalationStatus && (
-                        <p className="mt-1">
-                          <EscalationBadge ticket={ticket} />
-                        </p>
-                      )}
                     </TableCell>
                     <TableCell className="text-ink-muted">{ticket.reporterName}</TableCell>
+                    <TableCell>
+                      <Responsible ticket={ticket} techName={techName} />
+                    </TableCell>
                     <TableCell>
                       <CategoryQuickEditor ticketId={ticket.id} categoryId={ticket.categoryId} categories={categories} />
                     </TableCell>

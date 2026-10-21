@@ -18,7 +18,7 @@ import {
 } from "@/lib/requests";
 import { deleteAsset } from "./assets";
 import { deleteMaintenanceTask } from "./maintenance";
-import { createInternalTicket } from "./tickets";
+import { createStaffTicket } from "@/lib/staffTicket";
 
 export type ActionResult = { error?: string };
 
@@ -199,12 +199,12 @@ export async function resolveRequest(requestId: string, input: ResolveInput): Pr
     !request.ticketId
   ) {
     const category =
-      (await db.category.findFirst({ where: { name: "Hardware", active: true } })) ??
+      (await db.category.findFirst({ where: { name: { in: ["Equipos (PC / Notebooks)", "Hardware"] }, active: true } })) ??
       (await db.category.findFirst({ where: { active: true }, orderBy: { name: "asc" } }));
     if (category) {
       const piece = componentLabel(request.component);
       const lines = parseItems(request.items).map((i) => `- ${i.text}${i.qty ? ` x${i.qty}` : ""}`);
-      const ticket = await createInternalTicket({
+      const ticket = await createStaffTicket("ADMIN", {
         title: request.title,
         description: [
           `${KIND_META[request.kind].label} aprobado (solicitud #${request.number})${piece ? `: ${piece}` : ""}.`,
@@ -216,8 +216,7 @@ export async function resolveRequest(requestId: string, input: ResolveInput): Pr
         categoryId: category.id,
         priority: "MEDIUM",
         assetId: request.assetId,
-        reporterName: request.requestedBy,
-      });
+      }, request.requestedBy);
       if (ticket.error) return { error: `No se pudo crear el ticket: ${ticket.error}` };
     }
   }

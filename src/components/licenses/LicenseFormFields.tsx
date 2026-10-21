@@ -22,6 +22,7 @@ import {
   type LicensePricing,
   type LicenseStatus,
 } from "@/lib/licenses";
+import { useState } from "react";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -133,12 +134,24 @@ const NAME_PLACEHOLDER: Record<LicenseKind, string> = {
   OTHER: "Ej: Alquiler del servidor",
 };
 
+/** Valor del selector para "Otro": un proveedor que todavía no está cargado. */
+const NEW_PROVIDER = "__new__";
+
 /** Paso: nombre y proveedor. `showStatus` solo al editar: una carga nueva siempre es activa. */
 export function StepName({
   values,
   onChange,
   showStatus = false,
-}: StepProps & { showStatus?: boolean }) {
+  providerNames = [],
+}: StepProps & { showStatus?: boolean; providerNames?: string[] }) {
+  // Los servicios eligen entre los proveedores ya cargados; el software sigue siendo texto libre.
+  const pickFromList = values.kind !== "SOFTWARE";
+  const [adding, setAdding] = useState(false);
+  const known = providerNames.includes(values.vendor);
+  // Un proveedor que no está en la lista (o uno nuevo en camino) se escribe a mano.
+  const writing = adding || (values.vendor !== "" && !known);
+  const selectValue = writing ? NEW_PROVIDER : values.vendor;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
@@ -154,11 +167,54 @@ export function StepName({
       <div className={showStatus ? "grid gap-3 sm:grid-cols-2" : "flex flex-col gap-2"}>
         <div className="flex flex-col gap-2">
           <Label>Proveedor (opcional)</Label>
-          <Input
-            value={values.vendor}
-            onChange={(e) => onChange({ vendor: e.target.value })}
-            placeholder={values.kind === "SOFTWARE" ? "Ej: Microsoft" : "Ej: Telecentro"}
-          />
+          {pickFromList ? (
+            <>
+              <Select
+                value={selectValue}
+                onValueChange={(v) => {
+                  if (v === NEW_PROVIDER) {
+                    setAdding(true);
+                    onChange({ vendor: "" });
+                  } else {
+                    setAdding(false);
+                    onChange({ vendor: v ?? "" });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sin proveedor">
+                    {(v: string) => (v === NEW_PROVIDER ? "Otro (agregar uno nuevo)" : v || "Sin proveedor")}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sin proveedor</SelectItem>
+                  {providerNames.map((n) => (
+                    <SelectItem key={n} value={n}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={NEW_PROVIDER}>Otro (agregar uno nuevo)</SelectItem>
+                </SelectContent>
+              </Select>
+              {writing && (
+                <>
+                  <Input
+                    autoFocus={adding}
+                    value={values.vendor}
+                    onChange={(e) => onChange({ vendor: e.target.value })}
+                    placeholder="Nombre del proveedor nuevo"
+                  />
+                  <p className="text-xs text-ink-muted">Se suma a la lista de Proveedores para la próxima vez.</p>
+                </>
+              )}
+            </>
+          ) : (
+            <Input
+              value={values.vendor}
+              onChange={(e) => onChange({ vendor: e.target.value })}
+              placeholder="Ej: Microsoft"
+            />
+          )}
         </div>
 
         {showStatus && (
@@ -452,8 +508,10 @@ export function LicenseFormFields({
   onChange,
   group,
   showMoney = true,
+  providerNames,
 }: StepProps & {
   group: LicenseGroup;
+  providerNames?: string[];
   /** El técnico no ve ni edita los costos: se le esconde esa sección. */
   showMoney?: boolean;
 }) {
@@ -464,7 +522,7 @@ export function LicenseFormFields({
         <StepKind values={values} onChange={onChange} kinds={KIND_ORDER} />
       </Section>
       <Section title="Nombre y proveedor">
-        <StepName values={values} onChange={onChange} showStatus />
+        <StepName values={values} onChange={onChange} showStatus providerNames={providerNames} />
       </Section>
       {group === "LICENSE" && (
         <Section title="Cómo se cobra">

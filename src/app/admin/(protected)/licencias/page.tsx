@@ -60,7 +60,7 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
         : "LICENSE";
   const group: LicenseGroup = vista === "SERVICE" ? "SERVICE" : "LICENSE";
 
-  const [licenses, pendingRetire, waitingOnProviders, providers] = await Promise.all([
+  const [licenses, pendingRetire, waitingOnProviders, providers, providerList] = await Promise.all([
     db.license.findMany({ orderBy: { code: "asc" } }),
     getPendingRetireIds(),
     // Para el aviso de la pestaña Proveedores: cuántos tickets esperan una respuesta.
@@ -79,7 +79,9 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
           },
         })
       : Promise.resolve([]),
+    db.provider.findMany({ select: { name: true }, orderBy: { name: "asc" } }),
   ]);
+  const providerNames = providerList.map((p) => p.name);
 
   // Al técnico no le llega plata: ni en la pantalla ni en los datos de la página.
   const rows: LicenseRow[] = licenses.map((l) => ({
@@ -214,7 +216,8 @@ export default async function LicenciasPage(props: PageProps<"/admin/licencias">
         group={group}
         licenses={rows.filter((r) => groupOfKind(r.kind) === group)}
         retirePendingIds={pendingRetire.licenses}
-        action={<LicenseWizard group={group} />}
+        providerNames={providerNames}
+        action={<LicenseWizard group={group} providerNames={providerNames} />}
       />
     </div>
   );

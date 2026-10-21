@@ -9,6 +9,7 @@ import {
 } from "./session";
 
 export const TECH_NAME = process.env.TECH_NAME || "Alfonso Araujo";
+export const ADMIN_NAME = process.env.ADMIN_NAME || "Francisco R. Sammartino";
 
 export async function setAdminSessionCookie(role: Role = "ADMIN") {
   const store = await cookies();
@@ -63,4 +64,9 @@ export async function adminOnly(): Promise<{ error: string } | null> {
 /** Nombre para firmar lo que se carga: el técnico se identifica por su nombre. */
 export function actorName(role: Role, fallback?: string | null) {
   return role === "TECH" ? TECH_NAME : fallback?.trim() || "Administrador";
+}
+
+/** A nombre de quién queda un ticket cargado desde la app: de quien lo carga. */
+export function reporterFor(role: Role) {
+  return role === "TECH" ? TECH_NAME : ADMIN_NAME;
 }

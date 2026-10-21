@@ -35,9 +35,19 @@ export const createInternalTicketSchema = z.object({
     .optional(),
   title: z.string().trim().min(3, "El título tiene que tener al menos 3 letras").max(150),
   description: z.string().trim().optional(),
-  categoryId: z.string().min(1, "Elegí una categoría"),
+  categoryId: z.string().optional(),
+  /** "Otro": una categoría nueva que queda guardada para la próxima. */
+  newCategoryName: z.string().trim().max(60).optional(),
+  /** Solo cuando la categoría es un problema con un proveedor. */
+  providerId: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
-  reporterName: z.string().trim().max(120).optional(),
+});
+
+export const categorySchema = z.object({
+  name: z.string().trim().min(2, "El nombre tiene que tener al menos 2 letras").max(60),
+  askAsset: z.boolean().optional(),
+  askProvider: z.boolean().optional(),
+  active: z.boolean().optional(),
 });
 
 export const createMaintenanceTaskSchema = z

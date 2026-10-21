@@ -144,7 +144,14 @@ function Summary({ values, showMoney }: { values: LicenseFormValues; showMoney: 
   );
 }
 
-export function LicenseWizard({ group }: { group: LicenseGroup }) {
+export function LicenseWizard({
+  group,
+  providerNames,
+}: {
+  group: LicenseGroup;
+  /** Proveedores ya cargados: un servicio elige uno o agrega uno nuevo. */
+  providerNames?: string[];
+}) {
   const router = useRouter();
   // El costo lo completa el administrador: al técnico se le salta ese paso.
   const isAdmin = useIsAdmin();
@@ -257,7 +264,11 @@ export function LicenseWizard({ group }: { group: LicenseGroup }) {
             />
           )}
           {step === "name" && (
-            <StepName values={values} onChange={(c) => setValues((v) => ({ ...v, ...c }))} />
+            <StepName
+              values={values}
+              onChange={(c) => setValues((v) => ({ ...v, ...c }))}
+              providerNames={providerNames}
+            />
           )}
           {step === "billing" && (
             <StepBilling values={values} onChange={(c) => setValues((v) => ({ ...v, ...c }))} />

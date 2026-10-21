@@ -94,8 +94,11 @@ export function LicensesTable({
   group,
   action,
   retirePendingIds = [],
+  providerNames,
 }: {
   licenses: LicenseRow[];
+  /** Proveedores ya cargados, para elegir uno al editar un servicio. */
+  providerNames?: string[];
   /** Licencias o servicios con una baja pedida que el admin todavía no resolvió. */
   retirePendingIds?: string[];
   group: LicenseGroup;
@@ -301,7 +304,7 @@ export function LicensesTable({
               </RecordFields>
 
               <RecordActions>
-                <EditLicenseDialog license={license} />
+                <EditLicenseDialog license={license} providerNames={providerNames} />
                 <RetireControl
                   target="LICENSE"
                   id={license.id}
@@ -455,7 +458,7 @@ export function LicensesTable({
 
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          <EditLicenseDialog license={license} />
+                          <EditLicenseDialog license={license} providerNames={providerNames} />
                           <RetireControl
                             target="LICENSE"
                             id={license.id}
